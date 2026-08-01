@@ -1,0 +1,38 @@
+{
+  "name": "tab-toolkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first Chrome tab management toolkit.",
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "format": "vp fmt",
+    "lint": "vp lint",
+    "test": "vp test",
+    "typecheck": "vp check --no-fmt --no-lint",
+    "preview": "vp preview"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "typescript": "~6.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7",
+    "vite-plus": "0.2.7"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "npm@11.8.0"
+}
