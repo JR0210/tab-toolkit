@@ -35,7 +35,7 @@ export function TabRow({ tab, group, onActivate }: TabRowProps) {
         />
       ) : null}
 
-      <TabFavicon faviconUrl={tab.faviconUrl} domain={tab.domain} />
+      <TabFavicon faviconUrl={tab.faviconUrl} fallbackLabel={tab.domain || tab.url} />
 
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex min-w-0 items-center gap-1.5">

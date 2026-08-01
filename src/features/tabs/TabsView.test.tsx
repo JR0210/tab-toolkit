@@ -113,6 +113,32 @@ describe('TabsView', () => {
     expect(activateTab).toHaveBeenCalledExactlyOnceWith(200, 12)
   })
 
+  it('derives a fallback initial from valid non-HTTP tab URLs', async () => {
+    // Catches file:, about:, and similar tabs collapsing to an unhelpful
+    // question mark merely because they have no HTTP hostname.
+    const snapshot: TabSnapshot = {
+      tabs: [
+        createTab({
+          id: 300,
+          windowId: 2,
+          title: 'Local notes',
+          url: 'file:///C:/notes.html',
+          domain: '',
+        }),
+      ],
+      groups: [],
+      currentWindowId: 2,
+      capturedAt: 3,
+    }
+
+    renderApp(createGateway({ snapshots: [snapshot] }))
+
+    await screen.findByText('1 tab · 1 window')
+    const row = document.querySelector('[data-tab-id="300"]')
+    expect(row).not.toBeNull()
+    expect(row!.firstElementChild).toHaveTextContent('F')
+  })
+
   it('announces loading while the live snapshot is pending', () => {
     // Catches an empty-looking popup while Chrome is still returning windows.
     const pendingSnapshot = createDeferred<TabSnapshot>()

@@ -1,5 +1,6 @@
 import { AlertCircleIcon, LoaderCircleIcon, PanelsTopLeftIcon } from 'lucide-react'
 import { Button } from '../../shared/ui/button'
+import { groupTabsByWindow } from './tab-inventory'
 import { useTabs } from './use-tabs'
 import { WindowSection } from './WindowSection'
 
@@ -53,20 +54,16 @@ export function TabsView() {
   }
 
   const groupsById = new Map(snapshot.groups.map((group) => [group.id, group]))
-  const windowIds = [...new Set(snapshot.tabs.map((tab) => tab.windowId))].sort(
-    (left, right) => left - right,
-  )
+  const windows = groupTabsByWindow(snapshot.tabs)
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto bg-canvas px-2 py-2">
       <div className="flex flex-col gap-3">
-        {windowIds.map((windowId) => (
+        {windows.map(({ tabs, windowId }) => (
           <WindowSection
             key={windowId}
             windowId={windowId}
-            tabs={snapshot.tabs
-              .filter((tab) => tab.windowId === windowId)
-              .sort((left, right) => left.index - right.index)}
+            tabs={tabs}
             groupsById={groupsById}
             current={windowId === snapshot.currentWindowId}
             onActivate={(tabId, containingWindowId) => {
