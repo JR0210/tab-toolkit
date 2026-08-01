@@ -249,6 +249,26 @@ describe('SettingsProvider theme behavior', () => {
 
     await screen.findByText('system/all/markdown')
   })
+
+  it('reports a rejected scope save as a settings persistence error', async () => {
+    // Catches a save error that is labelled as a theme-only failure when the
+    // user changed a different setting.
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(createMediaQueryList(false)))
+    const user = userEvent.setup()
+
+    render(
+      <SettingsProvider repository={createSettingsRepository(createRejectingSaveStorage())}>
+        <SettingsErrorControls />
+      </SettingsProvider>,
+    )
+
+    await screen.findByText('system/current/markdown')
+    await user.click(screen.getByRole('button', { name: 'Set scope to all' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Settings could not be saved. Try again.',
+    )
+  })
 })
 
 function SettingsProbe() {
@@ -294,6 +314,20 @@ function SettingsLateLoadControls() {
   return (
     <>
       <output>{`${settings.theme}/${settings.scope}/${settings.copyFormat}`}</output>
+      <button type="button" onClick={() => void updateSettings({ scope: 'all' })}>
+        Set scope to all
+      </button>
+    </>
+  )
+}
+
+function SettingsErrorControls() {
+  const { settings, persistenceError, updateSettings } = useSettings()
+
+  return (
+    <>
+      <output>{`${settings.theme}/${settings.scope}/${settings.copyFormat}`}</output>
+      {persistenceError && <span role="alert">{persistenceError}</span>}
       <button type="button" onClick={() => void updateSettings({ scope: 'all' })}>
         Set scope to all
       </button>
@@ -376,6 +410,18 @@ function createRejectingStorage(): SettingsStorageArea {
         delete persisted[key]
       }
     },
+  }
+}
+
+function createRejectingSaveStorage(): SettingsStorageArea {
+  return {
+    async get(): Promise<Record<string, unknown>> {
+      return { settings: { theme: 'system', scope: 'current', copyFormat: 'markdown' } }
+    },
+    async set(): Promise<void> {
+      throw new Error('local storage is unavailable')
+    },
+    async remove() {},
   }
 }
 

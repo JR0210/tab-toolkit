@@ -94,7 +94,7 @@ it('reports a rejected theme save and recovers for a later write', async () => {
   await user.click(await screen.findByRole('button', { name: 'Switch to dark theme' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Theme preference could not be saved. Try again.',
+    'Settings could not be saved. Try again.',
   )
 
   await user.click(screen.getByRole('button', { name: 'Switch to light theme' }))
