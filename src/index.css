@@ -1,53 +1,176 @@
-:root {
-  --background: #f6f8fc;
-  --surface: #ffffff;
-  --foreground: #172033;
-  --muted: #f0f3f8;
-  --muted-foreground: #687386;
-  --border: #dce2ec;
-  --accent: #3b6ff5;
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  color-scheme: light dark;
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: 'Spline Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/spline-sans-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/ibm-plex-mono-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/ibm-plex-mono-latin-500.woff2') format('woff2');
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-group-blue: var(--group-blue);
+  --color-group-teal: var(--group-teal);
+  --color-group-amber: var(--group-amber);
+  --color-group-rose: var(--group-rose);
+  --color-group-violet: var(--group-violet);
+  --font-sans: 'Spline Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+}
+
+:root {
+  color-scheme: light;
+  --canvas: #f6f8fc;
+  --background: #f6f8fc;
+  --foreground: #172033;
+  --card: #ffffff;
+  --card-foreground: #172033;
+  --popover: #ffffff;
+  --popover-foreground: #172033;
+  --primary: #3b6ff5;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f7;
+  --secondary-foreground: #172033;
+  --muted: #eef1f7;
+  --muted-foreground: #687386;
+  --accent: #eaf0fe;
+  --accent-foreground: #2a56c9;
+  --success: #169b7a;
+  --success-foreground: #ffffff;
+  --destructive: #d84a4a;
+  --destructive-foreground: #ffffff;
+  --border: #dce2ec;
+  --input: #dce2ec;
+  --ring: #3b6ff5;
+  --group-blue: #3b6ff5;
+  --group-teal: #169b7a;
+  --group-amber: #d98a1f;
+  --group-rose: #d84a6b;
+  --group-violet: #6d5bd0;
+  --radius: 8px;
+  font-family: 'Spline Sans', ui-sans-serif, system-ui, sans-serif;
   color: var(--foreground);
-  background: var(--background);
+  background: var(--card);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0e131c;
-    --surface: #161d29;
-    --foreground: #e6ebf4;
-    --muted: #1f2836;
-    --muted-foreground: #8b96a9;
-    --border: #263042;
-    --accent: #6f98ff;
-  }
+.dark {
+  color-scheme: dark;
+  --canvas: #0e131c;
+  --background: #0e131c;
+  --foreground: #e6ebf4;
+  --card: #161d29;
+  --card-foreground: #e6ebf4;
+  --popover: #1a222f;
+  --popover-foreground: #e6ebf4;
+  --primary: #5384f7;
+  --primary-foreground: #ffffff;
+  --secondary: #1f2836;
+  --secondary-foreground: #e6ebf4;
+  --muted: #1f2836;
+  --muted-foreground: #8b96a9;
+  --accent: #1e2c4a;
+  --accent-foreground: #9cbcff;
+  --success: #22b28e;
+  --success-foreground: #04130f;
+  --destructive: #e46a6a;
+  --destructive-foreground: #1a0808;
+  --border: #263042;
+  --input: #2c3646;
+  --ring: #5384f7;
+  --group-blue: #5384f7;
+  --group-teal: #22b28e;
+  --group-amber: #e0a545;
+  --group-rose: #e57393;
+  --group-violet: #8f7fe0;
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  width: 760px;
+  height: 580px;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
-  min-width: 20rem;
-  min-height: 100svh;
+  background: var(--card);
+  color: var(--foreground);
 }
 
-#root {
-  display: grid;
-  min-height: 100svh;
-  place-items: center;
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:where(a, [tabindex]:not(button)):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

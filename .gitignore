@@ -27,3 +27,4 @@ dist-ssr
 /benchmarks/
 /v0-export/
 /tab-toolkit.zip
+*.zip
