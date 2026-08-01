@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
+import type { BrowserGateway } from './chrome/browser-gateway'
+import type { TabSnapshot } from './domain/browser'
 import { createSettingsRepository } from './shared/settings/settings-repository'
 import type { SettingsStorageArea } from './shared/settings/settings-repository'
 
@@ -130,7 +132,21 @@ function renderApp({
     async remove() {},
   }
 
-  return render(<App repository={repository ?? createSettingsRepository(storage)} />)
+  return render(
+    <App
+      repository={repository ?? createSettingsRepository(storage)}
+      gateway={createPendingBrowserGateway()}
+    />,
+  )
+}
+
+function createPendingBrowserGateway(): BrowserGateway {
+  return {
+    getSnapshot() {
+      return new Promise<TabSnapshot>(() => undefined)
+    },
+    async activateTab() {},
+  }
 }
 
 function createFlakyStorage(): SettingsStorageArea {

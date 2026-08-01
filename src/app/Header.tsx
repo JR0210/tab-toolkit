@@ -1,4 +1,5 @@
 import { MoonIcon, MoreHorizontalIcon, SettingsIcon, SunIcon } from 'lucide-react'
+import { useTabs } from '../features/tabs/use-tabs'
 import { useSettings } from '../shared/settings/use-settings'
 import { Button } from '../shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../shared/ui/tooltip'
@@ -12,7 +13,10 @@ interface HeaderProps {
 
 export function Header({ view, onViewChange }: HeaderProps) {
   const { resolvedTheme, persistenceError, updateSettings } = useSettings()
+  const { snapshot } = useTabs()
   const isDark = resolvedTheme === 'dark'
+  const tabCount = snapshot?.tabs.length ?? 0
+  const windowCount = new Set(snapshot?.tabs.map((tab) => tab.windowId) ?? []).size
 
   return (
     <header className="flex flex-col border-b border-border bg-card">
@@ -21,7 +25,8 @@ export function Header({ view, onViewChange }: HeaderProps) {
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm font-semibold text-foreground">Tab Toolkit</span>
           <span className="truncate font-mono text-[11px] text-muted-foreground">
-            Local tab management
+            {tabCount} {tabCount === 1 ? 'tab' : 'tabs'} · {windowCount}{' '}
+            {windowCount === 1 ? 'window' : 'windows'}
           </span>
         </div>
 
