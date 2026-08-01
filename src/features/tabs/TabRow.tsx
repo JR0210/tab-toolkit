@@ -1,11 +1,14 @@
 import { ExternalLinkIcon, PinIcon, Volume2Icon, VolumeXIcon } from 'lucide-react'
 import type { TabGroupRecord, TabRecord } from '../../domain/browser'
+import { cn } from '../../shared/lib/cn'
 import { Button } from '../../shared/ui/button'
 import { TabFavicon } from './TabFavicon'
 
 interface TabRowProps {
   tab: TabRecord
   group?: TabGroupRecord
+  selected: boolean
+  onToggleSelected: () => void
   onActivate: (tabId: number, windowId: number) => void
 }
 
@@ -21,11 +24,14 @@ const groupColors: Record<TabGroupRecord['color'], string> = {
   orange: 'var(--group-amber)',
 }
 
-export function TabRow({ tab, group, onActivate }: TabRowProps) {
+export function TabRow({ tab, group, selected, onToggleSelected, onActivate }: TabRowProps) {
   return (
     <article
       data-tab-id={tab.id}
-      className="group/row relative flex min-h-11 items-center gap-2.5 rounded-md py-1 pr-1.5 pl-2 transition-colors hover:bg-secondary/60 focus-within:bg-secondary/60"
+      className={cn(
+        'group/row relative flex min-h-11 items-center gap-2.5 rounded-md py-1 pr-1.5 pl-2 transition-colors',
+        selected ? 'bg-accent/70' : 'hover:bg-secondary/60 focus-within:bg-secondary/60',
+      )}
     >
       {group ? (
         <span
@@ -34,6 +40,14 @@ export function TabRow({ tab, group, onActivate }: TabRowProps) {
           aria-hidden="true"
         />
       ) : null}
+
+      <input
+        type="checkbox"
+        checked={selected}
+        aria-label={`Select ${tab.title} (tab ${tab.id}, window ${tab.windowId})`}
+        onChange={onToggleSelected}
+        className="size-4 shrink-0 cursor-pointer accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      />
 
       <TabFavicon faviconUrl={tab.faviconUrl} fallbackLabel={tab.domain || tab.url} />
 

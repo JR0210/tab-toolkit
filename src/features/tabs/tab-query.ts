@@ -48,7 +48,9 @@ export function countActiveFilters(filters: Filters): number {
 }
 
 export function queryTabs(snapshot: TabSnapshot, query: TabQuery) {
-  const scopedTabs = snapshot.tabs.filter((tab) => isInScope(tab, snapshot.currentWindowId, query.scope))
+  const scopedTabs = snapshot.tabs.filter((tab) =>
+    isInScope(tab, snapshot.currentWindowId, query.scope),
+  )
   const scopedUrlCounts = countUrls(scopedTabs)
   const visibleTabs = scopedTabs.filter((tab) => matchesQuery(tab, query, scopedUrlCounts))
   const sections = groupAndSortTabs(visibleTabs, query.sort)
@@ -76,7 +78,11 @@ function countUrls(tabs: readonly TabRecord[]): Map<string, number> {
   return counts
 }
 
-function matchesQuery(tab: TabRecord, query: TabQuery, scopedUrlCounts: ReadonlyMap<string, number>): boolean {
+function matchesQuery(
+  tab: TabRecord,
+  query: TabQuery,
+  scopedUrlCounts: ReadonlyMap<string, number>,
+): boolean {
   const { filters } = query
 
   return (
@@ -131,7 +137,9 @@ function sortWindowTabs(tabs: readonly TabRecord[], sort: SortKey): TabRecord[] 
     return inChromeOrder
   }
 
-  return inChromeOrder.sort((left, right) => valueForSort(left, sort).localeCompare(valueForSort(right, sort)))
+  return inChromeOrder.sort((left, right) =>
+    valueForSort(left, sort).localeCompare(valueForSort(right, sort)),
+  )
 }
 
 function valueForSort(tab: TabRecord, sort: Exclude<SortKey, 'position'>): string {

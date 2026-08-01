@@ -20,7 +20,10 @@ describe('TabInteractionProvider', () => {
   it('adopts the persisted all scope after settings hydrate', async () => {
     // Catches reading the default settings scope only during the provider's first render.
     const settingsLoad = createDeferred<Settings>()
-    renderHydratedInteractions(createSnapshot([createTab(2, 1), createTab(3, 2)]), settingsLoad.promise)
+    renderHydratedInteractions(
+      createSnapshot([createTab(2, 1), createTab(3, 2)]),
+      settingsLoad.promise,
+    )
 
     expect(screen.getByTestId('scope')).toHaveTextContent('current')
 
@@ -35,7 +38,10 @@ describe('TabInteractionProvider', () => {
     // Catches persisted settings overwriting a scope the user selected while hydration was pending.
     const settingsLoad = createDeferred<Settings>()
     const user = userEvent.setup()
-    renderHydratedInteractions(createSnapshot([createTab(2, 1), createTab(3, 2)]), settingsLoad.promise)
+    renderHydratedInteractions(
+      createSnapshot([createTab(2, 1), createTab(3, 2)]),
+      settingsLoad.promise,
+    )
 
     await user.click(screen.getByRole('button', { name: 'Show current window' }))
     await act(async () => {
@@ -131,7 +137,9 @@ function InteractionProbe() {
 
   return (
     <>
-      <output data-testid="selected-ids">{[...selectedIds].sort((left, right) => left - right).join(',')}</output>
+      <output data-testid="selected-ids">
+        {[...selectedIds].sort((left, right) => left - right).join(',')}
+      </output>
       <output data-testid="selected-tabs">{selectedTabs.map((tab) => tab.id).join(',')}</output>
       <output data-testid="collapsed-window-ids">{[...collapsedWindowIds].join(',')}</output>
       <output data-testid="scope">{query.scope}</output>

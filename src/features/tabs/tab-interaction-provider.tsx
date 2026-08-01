@@ -143,7 +143,10 @@ export function TabInteractionProvider({ children }: PropsWithChildren) {
     () =>
       (snapshot?.tabs ?? [])
         .filter((tab) => selectedIds.has(tab.id))
-        .sort((left, right) => left.windowId - right.windowId || left.index - right.index || left.id - right.id),
+        .sort(
+          (left, right) =>
+            left.windowId - right.windowId || left.index - right.index || left.id - right.id,
+        ),
     [selectedIds, snapshot],
   )
 

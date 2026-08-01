@@ -107,9 +107,11 @@ describe('queryTabs', () => {
     ['domain', 'ALPHA.EXAMPLE', [1]],
   ] as const)('matches %s search case-insensitively', (_field, search, ids) => {
     // Catches case-sensitive matching or omitting one of title, URL, and domain.
-    expect(queryTabs(snapshot, { ...defaultQuery, scope: 'all', search }).visibleTabs.map((tab) => tab.id)).toEqual(
-      ids,
-    )
+    expect(
+      queryTabs(snapshot, { ...defaultQuery, scope: 'all', search }).visibleTabs.map(
+        (tab) => tab.id,
+      ),
+    ).toEqual(ids)
   })
 
   it.each([
@@ -123,9 +125,11 @@ describe('queryTabs', () => {
     // Catches a filter branch being ignored or using OR instead of the active constraint.
     const filters: Filters = { ...EMPTY_FILTERS, ...partialFilters }
 
-    expect(queryTabs(snapshot, { ...defaultQuery, scope: 'all', filters }).visibleTabs.map((tab) => tab.id)).toEqual(
-      ids,
-    )
+    expect(
+      queryTabs(snapshot, { ...defaultQuery, scope: 'all', filters }).visibleTabs.map(
+        (tab) => tab.id,
+      ),
+    ).toEqual(ids)
   })
 
   it('keeps exact-URL duplicates that occur inside the active scope only', () => {
@@ -142,7 +146,9 @@ describe('queryTabs', () => {
     // Catches global sorting and unstable ties that lose Chrome index order.
     const result = queryTabs(snapshot, { ...defaultQuery, scope: 'all', sort: 'title' })
 
-    expect(result.sections.map((section) => [section.windowId, section.tabs.map((tab) => tab.id)])).toEqual([
+    expect(
+      result.sections.map((section) => [section.windowId, section.tabs.map((tab) => tab.id)]),
+    ).toEqual([
       [1, [4, 2, 5, 6, 1]],
       [2, [7, 3]],
     ])
@@ -152,7 +158,9 @@ describe('queryTabs', () => {
     // Catches sorting by host globally or changing the established order for equal domains.
     const result = queryTabs(snapshot, { ...defaultQuery, scope: 'all', sort: 'domain' })
 
-    expect(result.sections.map((section) => [section.windowId, section.tabs.map((tab) => tab.id)])).toEqual([
+    expect(
+      result.sections.map((section) => [section.windowId, section.tabs.map((tab) => tab.id)]),
+    ).toEqual([
       [1, [1, 2, 4, 5, 6]],
       [2, [3, 7]],
     ])
@@ -187,7 +195,9 @@ describe('countActiveFilters', () => {
   })
 })
 
-function createTab(overrides: Partial<TabRecord> & Pick<TabRecord, 'id' | 'windowId' | 'index'>): TabRecord {
+function createTab(
+  overrides: Partial<TabRecord> & Pick<TabRecord, 'id' | 'windowId' | 'index'>,
+): TabRecord {
   return {
     id: overrides.id,
     windowId: overrides.windowId,
