@@ -108,9 +108,11 @@ export function TabsToolbar() {
           onChange={(event) => setManySelected(visibleIds, event.currentTarget.checked)}
         />
         <span className="font-mono text-[11px] text-muted-foreground">
-          {selectedVisibleCount > 0
-            ? `${selectedVisibleCount} of ${visibleIds.length} selected`
-            : `${visibleIds.length} tabs`}
+          {selectedIds.size > selectedVisibleCount
+            ? `${selectedIds.size} selected · ${selectedVisibleCount} of ${visibleIds.length} visible`
+            : selectedVisibleCount > 0
+              ? `${selectedVisibleCount} of ${visibleIds.length} selected`
+              : `${visibleIds.length} tabs`}
         </span>
       </div>
     </div>

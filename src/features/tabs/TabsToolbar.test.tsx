@@ -46,6 +46,37 @@ describe('Tabs toolbar', () => {
     expect(screen.getByRole('checkbox', { name: /Select Pinned news/ })).not.toBeChecked()
   })
 
+  it('reports retained selections independently from visible checkbox state', async () => {
+    // Catches the toolbar hiding or understating total selection whenever
+    // scope/search makes selected tabs partially or entirely invisible.
+    const user = userEvent.setup()
+    renderApp(createDiscoverySnapshot())
+    await screen.findByText('5 tabs · 2 windows')
+
+    await user.click(screen.getByRole('tab', { name: 'All windows' }))
+    await user.type(screen.getByRole('searchbox', { name: 'Search tabs' }), 'remote.example')
+    await user.click(screen.getByRole('checkbox', { name: 'Select all visible tabs' }))
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    await user.click(screen.getByRole('tab', { name: 'Current window' }))
+
+    const selectVisible = screen.getByRole('checkbox', { name: 'Select all visible tabs' })
+    expect(screen.getByText('1 selected · 0 of 4 visible')).toBeVisible()
+    expect(selectVisible).not.toBeChecked()
+    expect(selectVisible).not.toBePartiallyChecked()
+
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Select Pinned docs (tab 12, window 1)' }),
+    )
+    expect(screen.getByText('2 selected · 1 of 4 visible')).toBeVisible()
+    expect(selectVisible).toBePartiallyChecked()
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search tabs' }), 'no-matching-tab')
+    expect(screen.getByText('2 selected · 0 of 0 visible')).toBeVisible()
+    expect(selectVisible).toBeDisabled()
+    expect(selectVisible).not.toBeChecked()
+    expect(selectVisible).not.toBePartiallyChecked()
+  })
+
   it('clears filters and broadens scope from the no-results state', async () => {
     // Catches no-results actions that clear the wrong query field or fail to
     // use the provider's filter and scope setters.
