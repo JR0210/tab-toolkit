@@ -26,7 +26,7 @@ export function SettingsProvider({
           setPersistenceError(null)
         },
         (error: unknown) => {
-          setPersistenceError('Theme preference could not be saved. Try again.')
+          setPersistenceError('Settings could not be saved. Try again.')
           throw error
         },
       )
