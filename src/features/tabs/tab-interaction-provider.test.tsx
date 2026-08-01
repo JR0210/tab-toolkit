@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TabRecord, TabSnapshot } from '../../domain/browser'
+import { SettingsProvider } from '../../shared/settings/settings-provider'
+import type { SettingsRepository } from '../../shared/settings/settings-repository'
+import type { Settings } from '../../shared/settings/settings'
 import { SettingsContext } from '../../shared/settings/settings-context'
 import type { SettingsContextValue } from '../../shared/settings/settings-context'
 import { TabsContext } from './tabs-context'
@@ -9,7 +12,39 @@ import type { TabsContextValue } from './tabs-context'
 import { TabInteractionProvider } from './tab-interaction-provider'
 import { useTabInteractions } from './use-tab-interactions'
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('TabInteractionProvider', () => {
+  it('adopts the persisted all scope after settings hydrate', async () => {
+    // Catches reading the default settings scope only during the provider's first render.
+    const settingsLoad = createDeferred<Settings>()
+    renderHydratedInteractions(createSnapshot([createTab(2, 1), createTab(3, 2)]), settingsLoad.promise)
+
+    expect(screen.getByTestId('scope')).toHaveTextContent('current')
+
+    await act(async () => {
+      settingsLoad.resolve({ theme: 'light', scope: 'all', copyFormat: 'markdown' })
+    })
+
+    await waitFor(() => expect(screen.getByTestId('scope')).toHaveTextContent('all'))
+  })
+
+  it('keeps an explicit scope choice when settings hydrate afterwards', async () => {
+    // Catches persisted settings overwriting a scope the user selected while hydration was pending.
+    const settingsLoad = createDeferred<Settings>()
+    const user = userEvent.setup()
+    renderHydratedInteractions(createSnapshot([createTab(2, 1), createTab(3, 2)]), settingsLoad.promise)
+
+    await user.click(screen.getByRole('button', { name: 'Show current window' }))
+    await act(async () => {
+      settingsLoad.resolve({ theme: 'light', scope: 'all', copyFormat: 'markdown' })
+    })
+
+    await waitFor(() => expect(screen.getByTestId('scope')).toHaveTextContent('current'))
+  })
+
   it('prunes selections for tabs removed from the live snapshot', async () => {
     // Catches selection state retaining an ID after Chrome no longer returns that tab.
     const user = userEvent.setup()
@@ -42,6 +77,18 @@ describe('TabInteractionProvider', () => {
     expect(screen.getByTestId('selected-ids')).toBeEmptyDOMElement()
   })
 
+  it('keeps a selected visible tab in bulk selections after search hides it', async () => {
+    // Catches selectedTabs being filtered through the visible query result.
+    const user = userEvent.setup()
+    renderInteractions(createSnapshot([createTab(2, 1), createTab(3, 2)]))
+
+    await user.click(screen.getByRole('button', { name: 'Toggle 2' }))
+    await user.click(screen.getByRole('button', { name: 'Hide all tabs' }))
+
+    expect(screen.getByTestId('selected-ids')).toHaveTextContent('2')
+    expect(screen.getByTestId('selected-tabs')).toHaveTextContent('2')
+  })
+
   it('tracks collapsed windows independently of the tab query', async () => {
     // Catches window collapse state being derived from the latest query instead of user action.
     const user = userEvent.setup()
@@ -71,6 +118,7 @@ function InteractionProbe() {
   const {
     query,
     setScope,
+    setSearch,
     selectedIds,
     selectedTabs,
     toggleSelected,
@@ -99,6 +147,12 @@ function InteractionProbe() {
       <button type="button" onClick={() => setScope('all')}>
         Show all windows
       </button>
+      <button type="button" onClick={() => setScope('current')}>
+        Show current window
+      </button>
+      <button type="button" onClick={() => setSearch('not-a-tab-title')}>
+        Hide all tabs
+      </button>
       <button type="button" onClick={clearSelection}>
         Clear selection
       </button>
@@ -111,6 +165,20 @@ function InteractionProbe() {
 
 function renderInteractions(snapshot: TabSnapshot) {
   return render(<InteractionHarness snapshot={snapshot} />)
+}
+
+function renderHydratedInteractions(snapshot: TabSnapshot, settings: Promise<Settings>) {
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(createMediaQueryList()))
+
+  return render(
+    <TabsContext value={createTabsContext(snapshot)}>
+      <SettingsProvider repository={createSettingsRepository(settings)}>
+        <TabInteractionProvider>
+          <InteractionProbe />
+        </TabInteractionProvider>
+      </SettingsProvider>
+    </TabsContext>,
+  )
 }
 
 function createTabsContext(snapshot: TabSnapshot): TabsContextValue {
@@ -129,6 +197,14 @@ function createSettingsContext(): SettingsContextValue {
     resolvedTheme: 'light',
     persistenceError: null,
     async updateSettings() {},
+  }
+}
+
+function createSettingsRepository(settings: Promise<Settings>): SettingsRepository {
+  return {
+    load: () => settings,
+    async save() {},
+    async reset() {},
   }
 }
 
@@ -152,4 +228,28 @@ function createTab(id: number, windowId: number): TabRecord {
     discarded: false,
     groupId: null,
   }
+}
+
+function createMediaQueryList(): MediaQueryList {
+  return {
+    matches: false,
+    media: '(prefers-color-scheme: dark)',
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn().mockReturnValue(true),
+  }
+}
+
+function createDeferred<Value>() {
+  let resolve: (value: Value) => void = () => {
+    throw new Error('Deferred promise is not initialized')
+  }
+  const promise = new Promise<Value>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
 }

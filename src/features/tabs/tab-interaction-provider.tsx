@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import type { TabRecord } from '../../domain/browser'
 import { useSettings } from '../../shared/settings/use-settings'
@@ -30,6 +30,8 @@ export const TabInteractionsContext = createContext<TabInteractionsContextValue 
 export function TabInteractionProvider({ children }: PropsWithChildren) {
   const { snapshot } = useTabs()
   const { settings } = useSettings()
+  const lastSettingsScope = useRef(settings.scope)
+  const hasUserSelectedScope = useRef(false)
   const [query, setQuery] = useState<TabQuery>(() => ({
     scope: settings.scope,
     search: '',
@@ -60,7 +62,20 @@ export function TabInteractionProvider({ children }: PropsWithChildren) {
     })
   }, [snapshot])
 
+  useEffect(() => {
+    if (settings.scope === lastSettingsScope.current) {
+      return
+    }
+
+    lastSettingsScope.current = settings.scope
+
+    if (!hasUserSelectedScope.current) {
+      setQuery((currentQuery) => ({ ...currentQuery, scope: settings.scope }))
+    }
+  }, [settings.scope])
+
   const setScope = useCallback((scope: TabQuery['scope']) => {
+    hasUserSelectedScope.current = true
     setQuery((currentQuery) => ({ ...currentQuery, scope }))
   }, [])
 
@@ -125,8 +140,11 @@ export function TabInteractionProvider({ children }: PropsWithChildren) {
   }, [])
 
   const selectedTabs = useMemo(
-    () => queryResult.visibleTabs.filter((tab) => selectedIds.has(tab.id)),
-    [queryResult.visibleTabs, selectedIds],
+    () =>
+      (snapshot?.tabs ?? [])
+        .filter((tab) => selectedIds.has(tab.id))
+        .sort((left, right) => left.windowId - right.windowId || left.index - right.index || left.id - right.id),
+    [selectedIds, snapshot],
   )
 
   const value = useMemo<TabInteractionsContextValue>(
