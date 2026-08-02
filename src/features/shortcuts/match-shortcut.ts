@@ -100,7 +100,10 @@ export function isEditableTarget(target: EventTarget | null): boolean {
  * editable, so typing 'c' in the search box never fires copy-selected, but
  * Escape can still blur/close things while a field has focus.
  */
-export function matchShortcut(event: KeyboardEvent, platform: PlatformFamily): ShortcutCommand | null {
+export function matchShortcut(
+  event: KeyboardEvent,
+  platform: PlatformFamily,
+): ShortcutCommand | null {
   const editable = isEditableTarget(event.target)
 
   for (const definition of SHORTCUTS) {

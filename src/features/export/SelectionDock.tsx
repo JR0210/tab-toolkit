@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ChevronDownIcon, ClipboardIcon, DownloadIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TabRecord } from '../../domain/browser'
@@ -14,7 +14,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../shared/ui/dropdown-menu'
+import { useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
+import { createChromeCloseRepository } from '../tabs/close-repository'
+import type { CloseRepository } from '../tabs/close-repository'
 import { ManageTabsMenu } from '../tabs/ManageTabsMenu'
+import { useCloseTabs } from '../tabs/use-close-tabs'
 import { useTabInteractions } from '../tabs/use-tab-interactions'
 import { useTabs } from '../tabs/use-tabs'
 import { COPY_FORMAT_LABELS, COPY_FORMATS, copyTabsToClipboard } from './copy-actions'
@@ -23,20 +27,20 @@ import { ExportDialog } from './ExportDialog'
 interface SelectionDockProps {
   clipboard?: ClipboardGateway
   download?: DownloadGateway
+  closeRepository?: CloseRepository
 }
 
 export function SelectionDock({
   clipboard = createClipboardGateway(),
   download,
+  closeRepository = createChromeCloseRepository(),
 }: SelectionDockProps) {
   const { selectedTabs, clearSelection } = useTabInteractions()
   const { snapshot } = useTabs()
   const { settings, updateSettings } = useSettings()
+  const closeSelected = useCloseTabs(closeRepository)
   const [exportOpen, setExportOpen] = useState(false)
-
-  if (selectedTabs.length === 0) {
-    return null
-  }
+  const hasSelection = selectedTabs.length > 0
 
   const runCopy = (tabs: readonly TabRecord[], format: CopyFormat) => {
     Promise.resolve()
@@ -58,6 +62,22 @@ export function SelectionDock({
   const handleFormatChoice = (format: CopyFormat) => {
     void updateSettings({ copyFormat: format })
     runCopy(selectedTabs, format)
+  }
+
+  const handleCloseSelected = useCallback(() => {
+    void closeSelected(selectedTabs)
+  }, [closeSelected, selectedTabs])
+
+  // Registering only while there's an actual selection (null otherwise)
+  // means these three commands naturally do nothing when nothing is
+  // selected -- there's no separate "is anything selected" check needed at
+  // the shortcut-routing layer.
+  useRegisterShortcut('copy-selected', hasSelection ? handlePrimaryCopy : null)
+  useRegisterShortcut('export-selected', hasSelection ? () => setExportOpen(true) : null)
+  useRegisterShortcut('close-selected', hasSelection ? handleCloseSelected : null)
+
+  if (!hasSelection) {
+    return null
   }
 
   return (
@@ -109,7 +129,7 @@ export function SelectionDock({
           Export
         </Button>
 
-        <ManageTabsMenu tabs={selectedTabs} />
+        <ManageTabsMenu tabs={selectedTabs} repository={closeRepository} />
 
         <Button variant="ghost" size="sm" onClick={clearSelection}>
           <XIcon />

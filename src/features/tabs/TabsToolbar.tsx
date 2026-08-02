@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { ComponentProps } from 'react'
 import { ArrowDownUpIcon, SearchIcon, XIcon } from 'lucide-react'
+import { useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
 import { cn } from '../../shared/lib/cn'
 import { Button } from '../../shared/ui/button'
 import {
@@ -22,11 +23,50 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 export function TabsToolbar() {
-  const { query, setScope, setSearch, setSort, selectedIds, setManySelected, visibleIds } =
-    useTabInteractions()
+  const {
+    query,
+    setScope,
+    setSearch,
+    setSort,
+    selectedIds,
+    setManySelected,
+    visibleIds,
+    clearSelection,
+  } = useTabInteractions()
   const selectedVisibleCount = visibleIds.filter((tabId) => selectedIds.has(tabId)).length
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useRegisterShortcut(
+    'focus-search',
+    useCallback(() => {
+      searchInputRef.current?.focus()
+    }, []),
+  )
+
+  useRegisterShortcut(
+    'select-visible',
+    useCallback(() => {
+      // Unconditionally select every visible tab -- unlike the header
+      // checkbox's click handler, this is never a toggle.
+      setManySelected(visibleIds, true)
+    }, [setManySelected, visibleIds]),
+  )
+
+  useRegisterShortcut(
+    'escape',
+    useCallback(() => {
+      if (selectedIds.size > 0) {
+        clearSelection()
+        return
+      }
+
+      if (query.search) {
+        setSearch('')
+      }
+    }, [selectedIds, clearSelection, query.search, setSearch]),
+  )
 
   return (
     <div className="flex flex-col gap-2 border-b border-border bg-card px-3 py-2.5">
@@ -54,6 +94,7 @@ export function TabsToolbar() {
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
           />
           <input
+            ref={searchInputRef}
             type="search"
             value={query.search}
             onChange={(event) => setSearch(event.target.value)}

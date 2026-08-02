@@ -52,12 +52,16 @@ describe('keysForPlatform', () => {
         const key = eventKeyFor(definition, platform)
 
         expect(
-          matches(createEvent({ key, metaKey: platform === 'mac', ctrlKey: platform === 'non-mac' })),
+          matches(
+            createEvent({ key, metaKey: platform === 'mac', ctrlKey: platform === 'non-mac' }),
+          ),
         ).toBe(true)
 
         // The other platform's modifier alone must never match.
         expect(
-          matches(createEvent({ key, metaKey: platform === 'non-mac', ctrlKey: platform === 'mac' })),
+          matches(
+            createEvent({ key, metaKey: platform === 'non-mac', ctrlKey: platform === 'mac' }),
+          ),
         ).toBe(false)
 
         // No modifier at all must never match.

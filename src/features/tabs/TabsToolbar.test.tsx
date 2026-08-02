@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
@@ -171,7 +171,72 @@ describe('Tabs toolbar', () => {
         .map((heading) => heading.textContent),
     ).toEqual(['Inbox', 'Local issue', 'Pinned docs', 'Pinned news'])
   })
+
+  it('focuses the search input with the focus-search keyboard shortcut', async () => {
+    renderApp(createDiscoverySnapshot())
+    await screen.findByText('5 tabs · 2 windows')
+
+    fireKeydown({ key: 'k', ctrlKey: true })
+
+    expect(screen.getByRole('searchbox', { name: 'Search tabs' })).toHaveFocus()
+  })
+
+  it('selects every visible tab (not a toggle) with the select-visible keyboard shortcut', async () => {
+    const user = userEvent.setup()
+    renderApp(createDiscoverySnapshot())
+    await screen.findByText('5 tabs · 2 windows')
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Inbox (tab 14, window 1)' }))
+    expect(screen.getByText('1 of 4 selected')).toBeVisible()
+
+    fireKeydown({ key: 'a', ctrlKey: true })
+    expect(screen.getByText('4 of 4 selected')).toBeVisible()
+
+    // A second press must stay a select-all, never toggle back to none.
+    fireKeydown({ key: 'a', ctrlKey: true })
+    expect(screen.getByText('4 of 4 selected')).toBeVisible()
+  })
+
+  it('clears the selection first and the search on a later Escape press', async () => {
+    const user = userEvent.setup()
+    renderApp(createDiscoverySnapshot())
+    await screen.findByText('5 tabs · 2 windows')
+
+    // "Inbox" narrows window 1 to a single visible tab.
+    await user.type(screen.getByRole('searchbox', { name: 'Search tabs' }), 'Inbox')
+    await user.click(screen.getByRole('checkbox', { name: 'Select Inbox (tab 14, window 1)' }))
+    expect(screen.getByText('1 of 1 selected')).toBeVisible()
+
+    fireKeydown({ key: 'Escape' })
+    expect(screen.getByRole('searchbox', { name: 'Search tabs' })).toHaveValue('Inbox')
+    expect(screen.getByText('1 tabs')).toBeVisible()
+
+    fireKeydown({ key: 'Escape' })
+    expect(screen.getByRole('searchbox', { name: 'Search tabs' })).toHaveValue('')
+  })
 })
+
+function fireKeydown(overrides: {
+  key: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
+}) {
+  act(() => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: overrides.key,
+        metaKey: overrides.metaKey ?? false,
+        ctrlKey: overrides.ctrlKey ?? false,
+        altKey: overrides.altKey ?? false,
+        shiftKey: overrides.shiftKey ?? false,
+        cancelable: true,
+        bubbles: true,
+      }),
+    )
+  })
+}
 
 function renderApp(snapshot: TabSnapshot) {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(createMediaQueryList()))

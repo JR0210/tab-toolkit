@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
 import type { BrowserGateway } from './chrome/browser-gateway'
 import type { TabSnapshot } from './domain/browser'
+import type { CloseRepository, CloseSnapshot } from './features/tabs/close-repository'
 import { createSettingsRepository } from './shared/settings/settings-repository'
 import type { SettingsStorageArea } from './shared/settings/settings-repository'
 import { createStubBrowserGateway } from './test/browser-gateway-mock'
@@ -113,14 +114,75 @@ it('reports a rejected theme save and recovers for a later write', async () => {
   })
 })
 
+it('switches views with the show-tabs/show-workspaces keyboard shortcuts', async () => {
+  // Catches view-switch shortcuts wired to stale state or not wired at all.
+  renderApp()
+  await screen.findByRole('button', { name: 'Tabs' })
+
+  fireKeydown({ key: '2', ctrlKey: true })
+  expect(screen.getByRole('button', { name: 'Workspaces' })).toHaveAttribute('aria-current', 'page')
+
+  fireKeydown({ key: '1', ctrlKey: true })
+  expect(screen.getByRole('button', { name: 'Tabs' })).toHaveAttribute('aria-current', 'page')
+})
+
+it('restores the last closed tabs with the undo-close keyboard shortcut', async () => {
+  // Catches undo-close either not being wired at the popup level or requiring
+  // a specific close toast to still be visible.
+  const snapshot: CloseSnapshot = {
+    closedAt: 1,
+    tabs: [{ url: 'https://example.com', title: 'Example', pinned: false, windowId: 1, index: 0 }],
+  }
+  const load = vi.fn().mockResolvedValue(snapshot)
+  const clear = vi.fn().mockResolvedValue(undefined)
+  const closeRepository: CloseRepository = { load, save: vi.fn(), clear }
+  const gateway = createStubBrowserGateway({
+    windowExists: vi.fn().mockResolvedValue(true),
+    createTab: vi.fn().mockResolvedValue(99),
+  })
+  renderApp({ gateway, closeRepository })
+  await screen.findByRole('button', { name: 'Tabs' })
+
+  fireKeydown({ key: 'z', ctrlKey: true })
+
+  await waitFor(() => expect(load).toHaveBeenCalledTimes(1))
+  await waitFor(() => expect(clear).toHaveBeenCalledTimes(1))
+})
+
+function fireKeydown(overrides: {
+  key: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
+}) {
+  act(() => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: overrides.key,
+        metaKey: overrides.metaKey ?? false,
+        ctrlKey: overrides.ctrlKey ?? false,
+        altKey: overrides.altKey ?? false,
+        shiftKey: overrides.shiftKey ?? false,
+        cancelable: true,
+        bubbles: true,
+      }),
+    )
+  })
+}
+
 function renderApp({
   theme = 'light',
   mediaQuery = createMediaQueryList(false),
   repository,
+  gateway,
+  closeRepository,
 }: {
   theme?: 'light' | 'dark' | 'system'
   mediaQuery?: TestMediaQueryList
   repository?: ReturnType<typeof createSettingsRepository>
+  gateway?: BrowserGateway
+  closeRepository?: CloseRepository
 } = {}) {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(mediaQuery))
   const storage: SettingsStorageArea = {
@@ -136,7 +198,8 @@ function renderApp({
   return render(
     <App
       repository={repository ?? createSettingsRepository(storage)}
-      gateway={createPendingBrowserGateway()}
+      gateway={gateway ?? createPendingBrowserGateway()}
+      closeRepository={closeRepository}
     />,
   )
 }

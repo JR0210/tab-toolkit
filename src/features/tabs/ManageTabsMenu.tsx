@@ -34,9 +34,8 @@ import {
 import { summarizeBulk } from './bulk-result'
 import { createChromeCloseRepository } from './close-repository'
 import type { CloseRepository } from './close-repository'
-import { showBulkResultToast, showCloseToast } from './lifecycle-toast'
-import { closeTabs } from './tab-lifecycle-service'
-import { useTabInteractions } from './use-tab-interactions'
+import { showBulkResultToast } from './lifecycle-toast'
+import { useCloseTabs } from './use-close-tabs'
 import { useTabs } from './use-tabs'
 
 interface ManageTabsMenuProps {
@@ -54,8 +53,8 @@ export function ManageTabsMenu({
   repository = createChromeCloseRepository(),
 }: ManageTabsMenuProps) {
   const gateway = useBrowserGateway()
-  const { snapshot, refresh } = useTabs()
-  const { setManySelected } = useTabInteractions()
+  const { refresh } = useTabs()
+  const closeSelected = useCloseTabs(repository)
   const [pending, setPending] = useState(false)
   const [addToGroupOpen, setAddToGroupOpen] = useState(false)
   const [duplicatesOpen, setDuplicatesOpen] = useState(false)
@@ -186,19 +185,9 @@ export function ManageTabsMenu({
     setPending(true)
 
     try {
-      const groupsById = new Map((snapshot?.groups ?? []).map((group) => [group.id, group]))
-      const result = await closeTabs(tabs, groupsById, gateway, repository)
-
-      setManySelected(result.succeeded, false)
-      showCloseToast(result, gateway, repository, refresh)
-    } catch {
-      toast.error('Could not close the tabs. Try again.')
+      await closeSelected(tabs)
     } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
+      setPending(false)
     }
   }
 
