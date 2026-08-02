@@ -11,6 +11,13 @@ export interface WorkspacesContextValue {
   renameWorkspace: (id: string, newName: string) => Promise<void>
   deleteWorkspace: (id: string) => Promise<void>
   undoDelete: () => Promise<void>
+  /**
+   * Reloads the workspace list from storage. Exposed for callers that write
+   * to the repository directly rather than through one of the actions above
+   * (e.g. importing URLs into a new workspace), so the list reflects that
+   * write without waiting for an unrelated action to trigger it.
+   */
+  refresh: () => Promise<void>
 }
 
 export const WorkspacesContext = createContext<WorkspacesContextValue | null>(null)
