@@ -90,6 +90,24 @@ export function findRemoteReferences(files, dir, allowlist = []) {
   for (const file of textFiles) {
     const content = readFileSync(path.join(dir, file), 'utf8')
 
+    // A remote-URL-shaped match (http(s)://, //fonts., or a dynamic
+    // import() target) that also contains a known analytics keyword is
+    // reported as the more specific 'analytics-import' kind. This is
+    // narrower than scanning the whole file for bare keyword occurrences
+    // (e.g. "sentry" inside a CSS class name or a code comment, neither of
+    // which is a remote reference at all) -- and it keeps the allowlist
+    // meaningful, since an allowlisted keyword can no longer silently
+    // suppress an unrelated, genuinely remote analytics URL that happens
+    // not to contain it.
+    const classifyKind = (literal, defaultKind) => {
+      const lowerLiteral = literal.toLowerCase()
+      const isAnalytics = ANALYTICS_KEYWORDS.some((keyword) =>
+        lowerLiteral.includes(keyword.toLowerCase()),
+      )
+
+      return isAnalytics ? 'analytics-import' : defaultKind
+    }
+
     collectPatternMatches({
       violations,
       file,
@@ -98,6 +116,7 @@ export function findRemoteReferences(files, dir, allowlist = []) {
       kind: 'remote-url',
       allowedLiterals,
       literalFromMatch: (match) => match[0],
+      classifyKind,
     })
 
     collectPatternMatches({
@@ -108,6 +127,7 @@ export function findRemoteReferences(files, dir, allowlist = []) {
       kind: 'protocol-relative-fonts',
       allowedLiterals,
       literalFromMatch: (match) => match[0],
+      classifyKind,
     })
 
     collectPatternMatches({
@@ -118,24 +138,8 @@ export function findRemoteReferences(files, dir, allowlist = []) {
       kind: 'remote-dynamic-import',
       allowedLiterals,
       literalFromMatch: (match) => match[2],
+      classifyKind,
     })
-
-    for (const keyword of ANALYTICS_KEYWORDS) {
-      let fromIndex = 0
-      let index
-
-      while ((index = content.toLowerCase().indexOf(keyword.toLowerCase(), fromIndex)) !== -1) {
-        const literal = content.slice(index, index + keyword.length)
-
-        if (!allowedLiterals.has(literal)) {
-          violations.push(
-            buildViolation({ file, content, index, literal, kind: 'analytics-import' }),
-          )
-        }
-
-        fromIndex = index + keyword.length
-      }
-    }
   }
 
   return violations
@@ -149,6 +153,7 @@ function collectPatternMatches({
   kind,
   allowedLiterals,
   literalFromMatch,
+  classifyKind,
 }) {
   for (const match of content.matchAll(pattern)) {
     const literal = literalFromMatch(match)
@@ -157,7 +162,11 @@ function collectPatternMatches({
       continue
     }
 
-    violations.push(buildViolation({ file, content, index: match.index, literal, kind }))
+    const resolvedKind = classifyKind ? classifyKind(literal, kind) : kind
+
+    violations.push(
+      buildViolation({ file, content, index: match.index, literal, kind: resolvedKind }),
+    )
   }
 }
 

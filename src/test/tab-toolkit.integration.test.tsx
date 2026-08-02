@@ -491,7 +491,7 @@ function createStubMediaQueryList(): MediaQueryList {
 
 function useFixedExportDate(): void {
   vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-08-02T12:00:00'))
+  vi.setSystemTime(new Date('2026-08-02T12:00:00Z'))
 }
 
 function createSettingsSaveRepository() {

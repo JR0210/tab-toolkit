@@ -98,10 +98,32 @@ try {
             $zipStream,
             [System.IO.Compression.ZipArchiveMode]::Create)
         try {
-            $files = Get-ChildItem -Path $distDirFullName -Recurse -File
-            foreach ($file in $files) {
-                $relativePath = $file.FullName.Substring($distDirFullName.Length + 1) -replace '\\', '/'
+            # Reproducibility: Get-ChildItem's enumeration order is not
+            # guaranteed stable across runs/machines, and ZipArchiveEntry
+            # defaults LastWriteTime to "now" -- both would make repeated
+            # packaging of identical dist/ contents produce different ZIP
+            # bytes. Sort entries by their relative path and pin every
+            # entry's timestamp to a fixed value so the archive is
+            # byte-for-byte reproducible when the source is unchanged.
+            # ZIP entry timestamps use the DOS date/time format, whose valid
+            # range starts at 1980-01-01 -- the Unix epoch (1970) is out of
+            # range and throws. 1980-01-01 UTC is the earliest valid, and
+            # therefore the conventional, fixed timestamp for this purpose.
+            $fixedEntryTimestamp = [System.DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [System.TimeSpan]::Zero)
+            $files = Get-ChildItem -Path $distDirFullName -Recurse -File |
+                ForEach-Object {
+                    [PSCustomObject]@{
+                        File         = $_
+                        RelativePath = ($_.FullName.Substring($distDirFullName.Length + 1) -replace '\\', '/')
+                    }
+                } |
+                Sort-Object -Property RelativePath
+
+            foreach ($entryInfo in $files) {
+                $file = $entryInfo.File
+                $relativePath = $entryInfo.RelativePath
                 $entry = $zipArchive.CreateEntry($relativePath, [System.IO.Compression.CompressionLevel]::Optimal)
+                $entry.LastWriteTime = $fixedEntryTimestamp
                 $entryStream = $entry.Open()
                 try {
                     $fileStream = [System.IO.File]::OpenRead($file.FullName)
