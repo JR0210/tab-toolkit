@@ -17,6 +17,7 @@ import type { CloseRepository } from '../tabs/close-repository'
 import { closeTabs } from '../tabs/tab-lifecycle-service'
 import { useTabs } from '../tabs/use-tabs'
 import { findDuplicateSets } from './duplicate-plan'
+import type { DuplicateSet } from './duplicate-plan'
 
 interface DuplicatesDialogProps {
   open: boolean
@@ -44,8 +45,18 @@ export function DuplicatesDialog({
 
   const sets = useMemo(() => findDuplicateSets(tabs), [tabs])
 
+  // Ignore a stale override -- e.g. the selection changed while the dialog
+  // was open and that candidate is no longer part of this set -- rather than
+  // letting it silently widen "non-keepers" to every candidate in the set.
+  const resolveKeepId = (set: DuplicateSet): number => {
+    const override = overrides.get(set.url)
+    return override !== undefined && set.candidates.some((candidate) => candidate.id === override)
+      ? override
+      : set.keepId
+  }
+
   const nonKeepers = sets.flatMap((set) => {
-    const keepId = overrides.get(set.url) ?? set.keepId
+    const keepId = resolveKeepId(set)
     return set.candidates.filter((candidate) => candidate.id !== keepId)
   })
 
@@ -108,7 +119,7 @@ export function DuplicatesDialog({
                 <input
                   type="radio"
                   name={`duplicate-keeper-${set.url}`}
-                  checked={(overrides.get(set.url) ?? set.keepId) === candidate.id}
+                  checked={resolveKeepId(set) === candidate.id}
                   onChange={() => {
                     setOverrides((current) => {
                       const next = new Map(current)

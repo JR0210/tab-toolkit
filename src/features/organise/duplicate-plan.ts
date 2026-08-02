@@ -12,17 +12,19 @@ export interface DuplicateSet {
  * (earliest) window index wins.
  */
 export function chooseDefaultKeeper(candidates: readonly TabRecord[]): number {
-  const pinned = candidates.find((tab) => tab.pinned)
-  if (pinned) {
-    return pinned.id
+  const byIndex = (left: TabRecord, right: TabRecord) => left.index - right.index
+
+  const pinned = candidates.filter((tab) => tab.pinned).sort(byIndex)
+  if (pinned.length > 0) {
+    return pinned[0].id
   }
 
-  const active = candidates.find((tab) => tab.active)
-  if (active) {
-    return active.id
+  const active = candidates.filter((tab) => tab.active).sort(byIndex)
+  if (active.length > 0) {
+    return active[0].id
   }
 
-  return [...candidates].sort((left, right) => left.index - right.index)[0].id
+  return [...candidates].sort(byIndex)[0].id
 }
 
 /**

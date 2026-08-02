@@ -310,6 +310,14 @@ describe('createChromeBrowserGateway window and tab creation', () => {
     })
   })
 
+  it('rejects grouping zero tabs instead of calling Chrome with an invalid tabIds value', async () => {
+    const { api, groupTabs } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.groupTabs([], 9)).rejects.toThrow()
+    expect(groupTabs).not.toHaveBeenCalled()
+  })
+
   it('updates a group title and color', async () => {
     const { api, updateTabGroup } = createChromeBrowserApiMock()
     const gateway = createChromeBrowserGateway(api)

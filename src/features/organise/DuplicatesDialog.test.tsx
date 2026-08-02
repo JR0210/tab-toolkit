@@ -51,6 +51,54 @@ describe('DuplicatesDialog', () => {
     expect(removeTabs).toHaveBeenCalledExactlyOnceWith([1])
   })
 
+  it('falls back to the default keeper when a chosen override is no longer among the candidates', async () => {
+    const user = userEvent.setup()
+    const gateway = createStubBrowserGateway()
+    const initialTabs = [
+      tab({ id: 1, url: 'https://example.com/a', pinned: false, active: false, index: 0 }),
+      tab({ id: 2, url: 'https://example.com/a', pinned: false, active: false, index: 1 }),
+      tab({ id: 3, url: 'https://example.com/a', pinned: false, active: false, index: 2 }),
+    ]
+
+    const { rerender } = renderDialog({ tabs: initialTabs, gateway })
+
+    // Default keeper is id 1 (lowest index); override to keep id 2 instead.
+    await user.click(screen.getByRole('radio', { name: /Tab 2/ }))
+    expect(
+      await screen.findByRole('button', { name: /close 2 duplicate tabs/i }),
+    ).toBeInTheDocument()
+
+    // The selection changes while the dialog is still open (e.g. tab 2 was
+    // closed elsewhere), so the chosen override (id 2) is no longer a
+    // candidate. Without the fallback, both remaining candidates would
+    // incorrectly be treated as non-keepers ("close 2") instead of falling
+    // back to the recomputed default keeper (id 1, lowest index) and only
+    // closing id 3.
+    const narrowedTabs = [
+      tab({ id: 1, url: 'https://example.com/a', pinned: false, active: false, index: 0 }),
+      tab({ id: 3, url: 'https://example.com/a', pinned: false, active: false, index: 2 }),
+    ]
+    rerender(
+      <BrowserProvider gateway={gateway}>
+        <TabsContext
+          value={createTabsContext(
+            { tabs: narrowedTabs, groups: [], currentWindowId: 1, capturedAt: 1 },
+            vi.fn().mockResolvedValue(undefined),
+          )}
+        >
+          <SettingsContext value={createSettingsContext()}>
+            <DuplicatesDialog open onOpenChange={vi.fn()} tabs={narrowedTabs} />
+            <Toaster />
+          </SettingsContext>
+        </TabsContext>
+      </BrowserProvider>,
+    )
+
+    expect(
+      await screen.findByRole('button', { name: /close 1 duplicate tab$/i }),
+    ).toBeInTheDocument()
+  })
+
   it('confirming calls closeTabs with exactly the non-keeper tabs across all sets', async () => {
     const user = userEvent.setup()
     const removeTabs = vi.fn().mockResolvedValue({ succeeded: [2, 4], failed: [] })

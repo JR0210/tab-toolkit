@@ -195,8 +195,14 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
       await chrome.tabs.move([tabId], { windowId, index })
     },
     async groupTabs(tabIds, windowId, groupId) {
+      if (tabIds.length === 0) {
+        throw new Error('Cannot group zero tabs')
+      }
+
+      const [first, ...rest] = tabIds
+
       return chrome.tabs.group({
-        tabIds: [...tabIds] as [number, ...number[]],
+        tabIds: [first, ...rest],
         groupId,
         createProperties: groupId === undefined ? { windowId } : undefined,
       })

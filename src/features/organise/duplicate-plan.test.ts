@@ -30,6 +30,24 @@ describe('chooseDefaultKeeper', () => {
       ]),
     ).toBe(2)
   })
+
+  it('breaks a tie between multiple pinned tabs by earliest index, not array order', () => {
+    expect(
+      chooseDefaultKeeper([
+        tab({ id: 1, pinned: true, active: false, index: 5 }),
+        tab({ id: 2, pinned: true, active: false, index: 1 }),
+      ]),
+    ).toBe(2)
+  })
+
+  it('breaks a tie between multiple active tabs by earliest index, not array order', () => {
+    expect(
+      chooseDefaultKeeper([
+        tab({ id: 1, pinned: false, active: true, index: 5 }),
+        tab({ id: 2, pinned: false, active: true, index: 1 }),
+      ]),
+    ).toBe(2)
+  })
 })
 
 describe('findDuplicateSets', () => {
