@@ -1,6 +1,9 @@
 import { AlertCircleIcon, LoaderCircleIcon, PanelsTopLeftIcon, SearchXIcon } from 'lucide-react'
 import { SelectionDock } from '../export/SelectionDock'
+import type { ClipboardGateway } from '../../platform/clipboard-gateway'
+import type { DownloadGateway } from '../../platform/download-gateway'
 import { Button } from '../../shared/ui/button'
+import type { CloseRepository } from './close-repository'
 import { TabInteractionProvider } from './tab-interaction-provider'
 import { EMPTY_FILTERS } from './tab-query'
 import { TabsToolbar } from './TabsToolbar'
@@ -8,15 +11,26 @@ import { useTabInteractions } from './use-tab-interactions'
 import { useTabs } from './use-tabs'
 import { WindowSection } from './WindowSection'
 
-export function TabsView() {
+interface TabsViewProps {
+  /** Injectable for tests; forwarded to SelectionDock, which defaults each on its own. */
+  closeRepository?: CloseRepository
+  clipboard?: ClipboardGateway
+  download?: DownloadGateway
+}
+
+export function TabsView({ closeRepository, clipboard, download }: TabsViewProps = {}) {
   return (
     <TabInteractionProvider>
-      <TabsViewContent />
+      <TabsViewContent
+        closeRepository={closeRepository}
+        clipboard={clipboard}
+        download={download}
+      />
     </TabInteractionProvider>
   )
 }
 
-function TabsViewContent() {
+function TabsViewContent({ closeRepository, clipboard, download }: TabsViewProps) {
   const { activateTab, error, refresh, snapshot, status } = useTabs()
   const { activeFilterCount, query, sections, setFilters, setScope } = useTabInteractions()
 
@@ -119,7 +133,7 @@ function TabsViewContent() {
         )}
       </div>
 
-      <SelectionDock />
+      <SelectionDock closeRepository={closeRepository} clipboard={clipboard} download={download} />
     </div>
   )
 }

@@ -21,9 +21,24 @@ import { Input } from '../../shared/ui/input'
 import { ImportDialog } from '../import/ImportDialog'
 import { useWorkspaces } from './use-workspaces'
 import { createChromeWorkspaceRepository } from './workspace-repository'
+import type { WorkspaceRepository } from './workspace-repository'
 import { WorkspaceCard } from './WorkspaceCard'
 
-export function WorkspacesView() {
+interface WorkspacesViewProps {
+  /**
+   * The SAME WorkspaceRepository instance the enclosing WorkspacesProvider
+   * was given, so Import URLs' "save as workspace" (below, via ImportDialog)
+   * writes through the identical repository that saveCurrentWindow/rename/
+   * delete use -- required for a caller-injected fake repository (e.g. in
+   * tests) to observe an import's save. When omitted, defaults to a fresh
+   * chrome.storage.local-backed instance, functionally identical to
+   * WorkspacesProvider's own default since both always read/write the same
+   * real underlying storage.
+   */
+  repository?: WorkspaceRepository
+}
+
+export function WorkspacesView({ repository }: WorkspacesViewProps = {}) {
   const {
     workspaces,
     status,
@@ -35,12 +50,10 @@ export function WorkspacesView() {
     refresh,
   } = useWorkspaces()
   const gateway = useBrowserGateway()
-  // Stable across renders so it doesn't defeat any memoization downstream;
-  // createChromeWorkspaceRepository() resolves the chrome API lazily per
-  // call, so a fresh instance here is functionally identical to the one
-  // WorkspacesProvider uses -- both always read/write the same underlying
-  // chrome.storage.local, there's no client-side cache to desync.
-  const importRepository = useMemo(() => createChromeWorkspaceRepository(), [])
+  const importRepository = useMemo(
+    () => repository ?? createChromeWorkspaceRepository(),
+    [repository],
+  )
   const [saveOpen, setSaveOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [saving, setSaving] = useState(false)
