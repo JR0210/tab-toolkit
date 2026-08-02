@@ -3,6 +3,7 @@ import {
   ArchiveIcon,
   ArrowDownAZIcon,
   ChevronDownIcon,
+  CopyXIcon,
   ExternalLinkIcon,
   FolderPlusIcon,
   GlobeIcon,
@@ -17,6 +18,8 @@ import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import type { BulkResult, TabRecord } from '../../domain/browser'
 import { AddToGroupDialog } from '../organise/AddToGroupDialog'
+import { DuplicatesDialog } from '../organise/DuplicatesDialog'
+import { findDuplicateSets } from '../organise/duplicate-plan'
 import { groupByDomain } from '../organise/group-tabs'
 import { moveSelectionToNewWindow } from '../organise/move-to-window'
 import { arrangeSelection } from '../organise/sort-tabs'
@@ -55,8 +58,10 @@ export function ManageTabsMenu({
   const { setManySelected } = useTabInteractions()
   const [pending, setPending] = useState(false)
   const [addToGroupOpen, setAddToGroupOpen] = useState(false)
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false)
 
   const ids = tabs.map((tab) => tab.id)
+  const hasDuplicates = findDuplicateSets(tabs).length > 0
 
   const runAction = async (
     verb: string,
@@ -249,6 +254,13 @@ export function ManageTabsMenu({
             <FolderPlusIcon />
             Add to group...
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setDuplicatesOpen(true)}
+            disabled={pending || !hasDuplicates}
+          >
+            <CopyXIcon />
+            Find duplicates...
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleClose} disabled={pending} variant="destructive">
             <XIcon />
             Close
@@ -257,6 +269,12 @@ export function ManageTabsMenu({
       </DropdownMenu>
 
       <AddToGroupDialog open={addToGroupOpen} onOpenChange={setAddToGroupOpen} tabs={tabs} />
+      <DuplicatesDialog
+        open={duplicatesOpen}
+        onOpenChange={setDuplicatesOpen}
+        tabs={tabs}
+        repository={repository}
+      />
     </>
   )
 }
