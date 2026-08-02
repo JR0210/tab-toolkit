@@ -131,6 +131,12 @@ describe('formatTabsForClipboard', () => {
         'title,url\r\n"\'=HYPERLINK(""bad"")",https://a.test',
       )
     })
+
+    it('falls back to "Untitled tab" when the title is missing', () => {
+      const tabs = [createTab({ title: '', url: 'https://a.test' })]
+
+      expect(formatTabsForClipboard(tabs, 'csv')).toBe('title,url\r\nUntitled tab,https://a.test')
+    })
   })
 
   describe('json format', () => {
@@ -139,6 +145,14 @@ describe('formatTabsForClipboard', () => {
 
       expect(formatTabsForClipboard(tabs, 'json')).toBe(
         JSON.stringify([{ title: 'A', url: 'https://a.test' }], null, 2),
+      )
+    })
+
+    it('falls back to "Untitled tab" when the title is missing', () => {
+      const tabs = [createTab({ title: '', url: 'https://a.test' })]
+
+      expect(formatTabsForClipboard(tabs, 'json')).toBe(
+        JSON.stringify([{ title: 'Untitled tab', url: 'https://a.test' }], null, 2),
       )
     })
   })

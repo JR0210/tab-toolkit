@@ -70,6 +70,21 @@ describe('SelectionDock', () => {
     expect(screen.queryByText(/^Copied/)).not.toBeInTheDocument()
   })
 
+  it('shows the error toast even when the clipboard gateway throws synchronously', async () => {
+    const user = userEvent.setup()
+    const clipboard: ClipboardGateway = {
+      writeText: vi.fn().mockImplementation(() => {
+        throw new Error('clipboard unavailable')
+      }),
+    }
+    renderDock({ preselectedIds: [2], copyFormat: 'urls', clipboard })
+
+    await user.click(await screen.findByRole('button', { name: /^Copy/ }))
+
+    const errorToast = await screen.findByText(/could not copy/i)
+    expect(errorToast.textContent?.toLowerCase()).not.toContain('copied')
+  })
+
   it('updates the saved copy format and copies using the newly chosen format in the same click', async () => {
     const user = userEvent.setup()
     const clipboard = createClipboardGateway()

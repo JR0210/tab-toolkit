@@ -22,7 +22,7 @@ export function formatTabsForClipboard(tabs: readonly TabRecord[], format: CopyF
 }
 
 function toTitleUrlRows(tabs: readonly TabRecord[]) {
-  return tabs.map((tab) => ({ title: tab.title, url: tab.url }))
+  return tabs.map((tab) => ({ title: tabLabel(tab), url: tab.url }))
 }
 
 function tabLabel(tab: TabRecord): string {

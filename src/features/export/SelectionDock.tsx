@@ -38,14 +38,16 @@ export function SelectionDock({
   }
 
   const runCopy = (tabs: readonly TabRecord[], format: CopyFormat) => {
-    copyTabsToClipboard(tabs, format, clipboard).then(
-      () => {
-        toast.success(tabs.length === 1 ? 'Copied 1 tab' : `Copied ${tabs.length} tabs`)
-      },
-      () => {
-        toast.error('Could not copy to the clipboard. Try again.')
-      },
-    )
+    Promise.resolve()
+      .then(() => copyTabsToClipboard(tabs, format, clipboard))
+      .then(
+        () => {
+          toast.success(tabs.length === 1 ? 'Copied 1 tab' : `Copied ${tabs.length} tabs`)
+        },
+        () => {
+          toast.error('Could not copy to the clipboard. Try again.')
+        },
+      )
   }
 
   const handlePrimaryCopy = () => {

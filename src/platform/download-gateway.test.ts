@@ -4,8 +4,12 @@ import { createDownloadGateway } from './download-gateway'
 describe('createDownloadGateway', () => {
   let createObjectURL: ReturnType<typeof vi.fn<(obj: Blob | MediaSource) => string>>
   let revokeObjectURL: ReturnType<typeof vi.fn<(url: string) => void>>
+  let originalCreateObjectURL: typeof URL.createObjectURL | undefined
+  let originalRevokeObjectURL: typeof URL.revokeObjectURL | undefined
 
   beforeEach(() => {
+    originalCreateObjectURL = URL.createObjectURL?.bind(URL)
+    originalRevokeObjectURL = URL.revokeObjectURL?.bind(URL)
     createObjectURL = vi.fn(() => 'blob:mock-url')
     revokeObjectURL = vi.fn()
     URL.createObjectURL = createObjectURL
@@ -14,8 +18,18 @@ describe('createDownloadGateway', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
-    Reflect.deleteProperty(URL, 'createObjectURL')
-    Reflect.deleteProperty(URL, 'revokeObjectURL')
+
+    if (originalCreateObjectURL === undefined) {
+      Reflect.deleteProperty(URL, 'createObjectURL')
+    } else {
+      URL.createObjectURL = originalCreateObjectURL
+    }
+
+    if (originalRevokeObjectURL === undefined) {
+      Reflect.deleteProperty(URL, 'revokeObjectURL')
+    } else {
+      URL.revokeObjectURL = originalRevokeObjectURL
+    }
   })
 
   it('creates exactly one blob with the given contents and mime type', () => {
