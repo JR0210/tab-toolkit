@@ -165,7 +165,7 @@ export function TabsToolbar() {
             ? `${selectedIds.size} selected · ${selectedVisibleCount} of ${visibleIds.length} visible`
             : selectedVisibleCount > 0
               ? `${selectedVisibleCount} of ${visibleIds.length} selected`
-              : `${visibleIds.length} tabs`}
+              : `${visibleIds.length} ${visibleIds.length === 1 ? 'tab' : 'tabs'}`}
         </span>
       </div>
     </div>
