@@ -20,6 +20,13 @@ describe('csvCell', () => {
     },
   )
 
+  it.each([' =cmd', '\t=cmd', '  +cmd'])(
+    'neutralises a formula prefix hidden behind leading whitespace (%j)',
+    (value) => {
+      expect(csvCell(value)).toBe(`"'${value}"`)
+    },
+  )
+
   it('quotes cells containing commas', () => {
     expect(csvCell('a,b')).toBe('"a,b"')
   })
@@ -117,6 +124,12 @@ describe('buildExportRows', () => {
     const tabs = [createTab({ id: 1, title: 'First' }), createTab({ id: 2, title: 'Second' })]
 
     expect(buildExportRows(tabs, []).map((row) => row.title)).toEqual(['First', 'Second'])
+  })
+
+  it('falls back to "Untitled tab" when the title is missing', () => {
+    const tabs = [createTab({ title: '' })]
+
+    expect(buildExportRows(tabs, [])[0].title).toBe('Untitled tab')
   })
 
   it('resolves the group title for a grouped tab', () => {

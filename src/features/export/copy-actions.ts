@@ -19,7 +19,7 @@ export const COPY_FORMATS = Object.keys(COPY_FORMAT_LABELS) as CopyFormat[]
  * than reading selection state so future row-level copy actions cannot
  * accidentally copy the whole selection instead of a single row.
  */
-export function copyTabsToClipboard(
+export async function copyTabsToClipboard(
   tabs: readonly TabRecord[],
   format: CopyFormat,
   clipboard: ClipboardGateway,

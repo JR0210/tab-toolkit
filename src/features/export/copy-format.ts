@@ -1,8 +1,7 @@
 import type { TabRecord } from '../../domain/browser'
 import type { CopyFormat } from '../../shared/settings/settings'
 import { serializeCsv, serializeJson } from './export-format'
-
-const UNTITLED_LABEL = 'Untitled tab'
+import { tabLabel } from './tab-label'
 
 export function formatTabsForClipboard(tabs: readonly TabRecord[], format: CopyFormat): string {
   switch (format) {
@@ -23,10 +22,6 @@ export function formatTabsForClipboard(tabs: readonly TabRecord[], format: CopyF
 
 function toTitleUrlRows(tabs: readonly TabRecord[]) {
   return tabs.map((tab) => ({ title: tabLabel(tab), url: tab.url }))
-}
-
-function tabLabel(tab: TabRecord): string {
-  return tab.title || UNTITLED_LABEL
 }
 
 function formatMarkdownLink(tab: TabRecord): string {

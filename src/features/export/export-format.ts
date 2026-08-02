@@ -1,4 +1,5 @@
 import type { TabGroupRecord, TabRecord } from '../../domain/browser'
+import { tabLabel } from './tab-label'
 
 export type ExportField = 'title' | 'url' | 'domain' | 'window' | 'group' | 'position' | 'pinned'
 
@@ -32,13 +33,15 @@ export const EXPORT_FIELD_LABELS: Record<ExportField, string> = {
   pinned: 'Pinned',
 }
 
+const LEADING_WHITESPACE = /^[ \t]+/
 const FORMULA_PREFIX = /^[=+\-@]/
 const NEEDS_QUOTING = /[",\r\n]/
 
 export function csvCell(value: unknown): string {
   const raw = String(value)
-  const neutralized = FORMULA_PREFIX.test(raw) ? `'${raw}` : raw
-  const needsQuoting = NEEDS_QUOTING.test(raw) || FORMULA_PREFIX.test(raw)
+  const isFormulaLike = FORMULA_PREFIX.test(raw.replace(LEADING_WHITESPACE, ''))
+  const neutralized = isFormulaLike ? `'${raw}` : raw
+  const needsQuoting = NEEDS_QUOTING.test(raw) || isFormulaLike
 
   return needsQuoting ? `"${neutralized.replaceAll('"', '""')}"` : neutralized
 }
@@ -77,7 +80,7 @@ export function buildExportRows(
   const groupsById = new Map(groups.map((group) => [group.id, group]))
 
   return tabs.map((tab) => ({
-    title: tab.title,
+    title: tabLabel(tab),
     url: tab.url,
     domain: tab.domain,
     window: tab.windowId,
