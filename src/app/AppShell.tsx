@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useBrowserGateway } from '../chrome/use-browser-gateway'
+import type { ClipboardGateway } from '../platform/clipboard-gateway'
+import type { DownloadGateway } from '../platform/download-gateway'
 import type { CloseRepository } from '../features/tabs/close-repository'
 import { createChromeCloseRepository } from '../features/tabs/close-repository'
 import { showBulkResultToast } from '../features/tabs/lifecycle-toast'
@@ -9,14 +11,23 @@ import { undoClose } from '../features/tabs/tab-lifecycle-service'
 import { useTabs } from '../features/tabs/use-tabs'
 import { useRegisterAction, useRegisterShortcut } from '../features/shortcuts/use-shortcut-actions'
 import { WorkspacesView } from '../features/workspaces/WorkspacesView'
+import type { WorkspaceRepository } from '../features/workspaces/workspace-repository'
 import { Header } from './Header'
 import type { PrimaryView } from './PrimaryNav'
 
 interface AppShellProps {
   closeRepository?: CloseRepository
+  workspaceRepository?: WorkspaceRepository
+  clipboard?: ClipboardGateway
+  download?: DownloadGateway
 }
 
-export function AppShell({ closeRepository = createChromeCloseRepository() }: AppShellProps) {
+export function AppShell({
+  closeRepository = createChromeCloseRepository(),
+  workspaceRepository,
+  clipboard,
+  download,
+}: AppShellProps) {
   const [view, setView] = useState<PrimaryView>('tabs')
   const gateway = useBrowserGateway()
   const { refresh } = useTabs()
@@ -59,7 +70,11 @@ export function AppShell({ closeRepository = createChromeCloseRepository() }: Ap
       <Header view={view} onViewChange={setView} />
       <main className="relative flex min-h-0 flex-1 flex-col" aria-label={`${view} view`}>
         <h1 className="sr-only">{view === 'tabs' ? 'Tabs' : 'Workspaces'}</h1>
-        {view === 'tabs' ? <TabsView /> : <WorkspacesView />}
+        {view === 'tabs' ? (
+          <TabsView closeRepository={closeRepository} clipboard={clipboard} download={download} />
+        ) : (
+          <WorkspacesView repository={workspaceRepository} />
+        )}
       </main>
     </div>
   )

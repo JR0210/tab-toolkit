@@ -209,10 +209,23 @@ describe('Tabs toolbar', () => {
 
     fireKeydown({ key: 'Escape' })
     expect(screen.getByRole('searchbox', { name: 'Search tabs' })).toHaveValue('Inbox')
-    expect(screen.getByText('1 tabs')).toBeVisible()
+    expect(screen.getByText('1 tab')).toBeVisible()
 
     fireKeydown({ key: 'Escape' })
     expect(screen.getByRole('searchbox', { name: 'Search tabs' })).toHaveValue('')
+  })
+
+  it('uses singular "tab" for exactly one visible tab and plural otherwise', async () => {
+    const user = userEvent.setup()
+    renderApp(createDiscoverySnapshot())
+    await screen.findByText('5 tabs · 2 windows')
+
+    // Default scope is the current window (4 of the fixture's 5 tabs).
+    expect(screen.getByText('4 tabs')).toBeVisible()
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search tabs' }), 'Inbox')
+    expect(screen.getByText('1 tab')).toBeVisible()
+    expect(screen.queryByText('1 tabs')).not.toBeInTheDocument()
   })
 })
 

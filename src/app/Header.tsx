@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoonIcon, MoreHorizontalIcon, SettingsIcon, SunIcon } from 'lucide-react'
+import { MoonIcon, SettingsIcon, SunIcon } from 'lucide-react'
 import { useTabs } from '../features/tabs/use-tabs'
 import { SettingsDialog } from '../features/settings/SettingsDialog'
 import { useSettings } from '../shared/settings/use-settings'
@@ -74,15 +74,6 @@ export function Header({ view, onViewChange }: HeaderProps) {
                 <SettingsIcon />
               </TooltipTrigger>
               <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger
-                render={<Button variant="ghost" size="icon-sm" aria-label="More options" />}
-              >
-                <MoreHorizontalIcon />
-              </TooltipTrigger>
-              <TooltipContent>More options</TooltipContent>
             </Tooltip>
           </div>
         </div>

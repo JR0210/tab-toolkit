@@ -63,7 +63,6 @@ it('gives every header icon button an accessible name', () => {
 
   expect(screen.getByRole('button', { name: /Switch to (?:dark|light) theme/ })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Settings' })).toBeVisible()
-  expect(screen.getByRole('button', { name: 'More options' })).toBeVisible()
 })
 
 it('applies an explicit theme choice from the header', async () => {

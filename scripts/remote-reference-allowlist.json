@@ -1,0 +1,46 @@
+[
+  {
+    "literal": "https://github.com/JR0210/tab-toolkit",
+    "reason": "Settings dialog's 'Help & documentation' link (SettingsDialog.tsx), opened via chrome.tabs.create only on explicit user click -- not a runtime request the extension initiates on its own."
+  },
+  {
+    "literal": "https://example.com",
+    "reason": "ImportDialog's URL textarea placeholder text (RFC 2606 reserved example domain), never fetched."
+  },
+  {
+    "literal": "https://example.org",
+    "reason": "ImportDialog's URL textarea placeholder text (RFC 2606 reserved example domain), never fetched."
+  },
+  {
+    "literal": "http://$",
+    "reason": "parse-urls.ts's bare-host normalization template literal (`http://${input}`), used only to build a candidate string for local `new URL()` validation of pasted import text -- never fetched."
+  },
+  {
+    "literal": "http://www.w3.org/2000/svg",
+    "reason": "SVG XML namespace URI used by React/lucide-react/sonner/base-ui when creating SVG DOM nodes (e.g. createElementNS) -- an inert namespace identifier, never a network request."
+  },
+  {
+    "literal": "http://www.w3.org/1998/Math/MathML",
+    "reason": "MathML XML namespace URI baked into React's DOM renderer (react-vendor chunk) -- an inert namespace identifier, never a network request."
+  },
+  {
+    "literal": "http://www.w3.org/1999/xlink",
+    "reason": "XLink XML namespace URI baked into React's DOM attribute handling (react-vendor chunk) -- an inert namespace identifier, never a network request."
+  },
+  {
+    "literal": "http://www.w3.org/XML/1998/namespace",
+    "reason": "XML namespace URI baked into React's DOM attribute handling (react-vendor chunk) -- an inert namespace identifier, never a network request."
+  },
+  {
+    "literal": "https://react.dev/errors/",
+    "reason": "React's minified-error-message helper builds a docs URL into the thrown Error's text (react-vendor/base-ui chunks) so a developer can look up the code -- constructed only if that error path throws, never fetched by the extension."
+  },
+  {
+    "literal": "https://base-ui.com/production-error",
+    "reason": "Base UI's minified-error-message helper builds a docs URL into the thrown Error's text (base-ui chunk), analogous to React's -- never fetched by the extension."
+  },
+  {
+    "literal": "https://tailwindcss.com",
+    "reason": "Tailwind CSS's generated stylesheet header comment (index.css) crediting the framework -- plain text in a CSS comment, never fetched."
+  }
+]
