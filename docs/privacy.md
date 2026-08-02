@@ -15,13 +15,13 @@ extension initiates on its own, ever.
 
 ## What data Tab Toolkit touches, and where it lives
 
-| Data | Where it's stored | Why | Leaves your device? |
-|---|---|---|---|
-| Live tab/window/tab-group info (titles, URLs, favicons, pinned/muted/group state) | Never persisted — read fresh from `chrome.tabs`/`chrome.windows`/`chrome.tabGroups` each time the popup opens, held only in the popup's in-memory React state while it's open | To render the Tabs view and act on your selection | No |
-| Extension settings (theme, default scope, default copy format) | `chrome.storage.local` | So your preferences persist across popup opens | No |
-| Saved workspaces (ordered list of URL/title/pinned/group-name descriptors — never Chrome's internal tab/window/group IDs, since those are session-specific and meaningless after a restart) | `chrome.storage.local` | So "Save current window" / "Open workspace" work | No |
-| The single most-recently-closed set of tabs (for the Undo affordance) | `chrome.storage.session` (cleared automatically when the browser session ends) | So closing tabs can be undone, including right after reopening the popup | No |
-| Search text, filters, sort order, current selection | Popup-only in-memory React state | Live query/selection UI | No — and it resets every time the popup closes, by design |
+| Data                                                                                                                                                                                        | Where it's stored                                                                                                                                                             | Why                                                                      | Leaves your device?                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Live tab/window/tab-group info (titles, URLs, favicons, pinned/muted/group state)                                                                                                           | Never persisted — read fresh from `chrome.tabs`/`chrome.windows`/`chrome.tabGroups` each time the popup opens, held only in the popup's in-memory React state while it's open | To render the Tabs view and act on your selection                        | No                                                        |
+| Extension settings (theme, default scope, default copy format)                                                                                                                              | `chrome.storage.local`                                                                                                                                                        | So your preferences persist across popup opens                           | No                                                        |
+| Saved workspaces (ordered list of URL/title/pinned/group-name descriptors — never Chrome's internal tab/window/group IDs, since those are session-specific and meaningless after a restart) | `chrome.storage.local`                                                                                                                                                        | So "Save current window" / "Open workspace" work                         | No                                                        |
+| The single most-recently-closed set of tabs (for the Undo affordance)                                                                                                                       | `chrome.storage.session` (cleared automatically when the browser session ends)                                                                                                | So closing tabs can be undone, including right after reopening the popup | No                                                        |
+| Search text, filters, sort order, current selection                                                                                                                                         | Popup-only in-memory React state                                                                                                                                              | Live query/selection UI                                                  | No — and it resets every time the popup closes, by design |
 
 Nothing above is ever bundled together, exported, or transmitted. There is
 no first-party or third-party server this extension talks to.
@@ -38,7 +38,7 @@ reason. As of this writing, every allowlisted literal is one of:
 - an inert XML namespace URI (SVG/MathML/XLink) that React and its
   dependencies bake into DOM node creation calls — never fetched,
 - a documentation link this extension's `react`/`base-ui` dependencies
-  construct only *inside a thrown error's message text* when something
+  construct only _inside a thrown error's message text_ when something
   already went wrong, purely for a developer reading a stack trace — never
   fetched by the extension itself,
 - a plain-text framework credit inside a generated CSS comment,
