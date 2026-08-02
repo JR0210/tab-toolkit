@@ -2,12 +2,14 @@ import { useEffect } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { BrowserProvider } from '../../chrome/browser-context'
 import type { TabRecord, TabSnapshot } from '../../domain/browser'
 import type { ClipboardGateway } from '../../platform/clipboard-gateway'
 import { SettingsContext } from '../../shared/settings/settings-context'
 import type { Settings } from '../../shared/settings/settings'
 import type { SettingsContextValue } from '../../shared/settings/settings-context'
 import { Toaster } from '../../shared/ui/toaster'
+import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 import { TabInteractionProvider } from '../tabs/tab-interaction-provider'
 import { TabsContext } from '../tabs/tabs-context'
 import type { TabsContextValue } from '../tabs/tabs-context'
@@ -152,15 +154,17 @@ function renderDock({
   const snapshot = createSnapshot(tabs)
 
   return render(
-    <TabsContext value={createTabsContext(snapshot)}>
-      <SettingsContext value={createSettingsContext(copyFormat, updateSettings)}>
-        <TabInteractionProvider>
-          <SelectPreset ids={preselectedIds} />
-          <SelectionDock clipboard={clipboard} />
-        </TabInteractionProvider>
-        <Toaster />
-      </SettingsContext>
-    </TabsContext>,
+    <BrowserProvider gateway={createStubBrowserGateway()}>
+      <TabsContext value={createTabsContext(snapshot)}>
+        <SettingsContext value={createSettingsContext(copyFormat, updateSettings)}>
+          <TabInteractionProvider>
+            <SelectPreset ids={preselectedIds} />
+            <SelectionDock clipboard={clipboard} />
+          </TabInteractionProvider>
+          <Toaster />
+        </SettingsContext>
+      </TabsContext>
+    </BrowserProvider>,
   )
 }
 

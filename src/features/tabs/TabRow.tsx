@@ -2,6 +2,7 @@ import { ExternalLinkIcon, PinIcon, Volume2Icon, VolumeXIcon } from 'lucide-reac
 import type { TabGroupRecord, TabRecord } from '../../domain/browser'
 import { cn } from '../../shared/lib/cn'
 import { Button } from '../../shared/ui/button'
+import { TabActionsMenu } from './TabActionsMenu'
 import { TabFavicon } from './TabFavicon'
 
 interface TabRowProps {
@@ -112,6 +113,8 @@ export function TabRow({ tab, group, selected, onToggleSelected, onActivate }: T
       >
         <ExternalLinkIcon />
       </Button>
+
+      <TabActionsMenu tab={tab} />
     </article>
   )
 }
