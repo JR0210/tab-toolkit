@@ -48,25 +48,34 @@ export function ManageTabsMenu({
 
   const ids = tabs.map((tab) => tab.id)
 
-  const runAction = async (verb: string, operation: (ids: number[]) => Promise<BulkResult>) => {
+  const runAction = async (
+    verb: string,
+    actionLabel: string,
+    operation: (ids: number[]) => Promise<BulkResult>,
+  ) => {
     setPending(true)
 
     try {
       const result = await operation(ids)
       showBulkResultToast(result, verb)
     } catch {
-      toast.error(`Could not ${verb.toLowerCase()} the tabs. Try again.`)
+      toast.error(`Could not ${actionLabel} the tabs. Try again.`)
     } finally {
-      setPending(false)
-      await refresh()
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 
-  const handlePin = () => runAction('Pinned', (tabIds) => gateway.setPinned(tabIds, true))
-  const handleUnpin = () => runAction('Unpinned', (tabIds) => gateway.setPinned(tabIds, false))
-  const handleMute = () => runAction('Muted', (tabIds) => gateway.setMuted(tabIds, true))
-  const handleUnmute = () => runAction('Unmuted', (tabIds) => gateway.setMuted(tabIds, false))
-  const handleReload = () => runAction('Reloaded', (tabIds) => gateway.reloadTabs(tabIds))
+  const handlePin = () => runAction('Pinned', 'pin', (tabIds) => gateway.setPinned(tabIds, true))
+  const handleUnpin = () =>
+    runAction('Unpinned', 'unpin', (tabIds) => gateway.setPinned(tabIds, false))
+  const handleMute = () => runAction('Muted', 'mute', (tabIds) => gateway.setMuted(tabIds, true))
+  const handleUnmute = () =>
+    runAction('Unmuted', 'unmute', (tabIds) => gateway.setMuted(tabIds, false))
+  const handleReload = () => runAction('Reloaded', 'reload', (tabIds) => gateway.reloadTabs(tabIds))
 
   const handleDiscard = async () => {
     const eligible = tabs.filter((tab) => !tab.active && !tab.discarded)
@@ -96,8 +105,11 @@ export function ManageTabsMenu({
     } catch {
       toast.error('Could not discard the tabs. Try again.')
     } finally {
-      setPending(false)
-      await refresh()
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 
@@ -113,8 +125,11 @@ export function ManageTabsMenu({
     } catch {
       toast.error('Could not close the tabs. Try again.')
     } finally {
-      setPending(false)
-      await refresh()
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 

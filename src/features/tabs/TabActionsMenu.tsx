@@ -46,26 +46,37 @@ export function TabActionsMenu({
 
   const canDiscard = !tab.active && !tab.discarded
 
-  const runAction = async (verb: string, operation: () => Promise<BulkResult>) => {
+  const runAction = async (
+    verb: string,
+    actionLabel: string,
+    operation: () => Promise<BulkResult>,
+  ) => {
     setPending(true)
 
     try {
       const result = await operation()
       showBulkResultToast(result, verb)
     } catch {
-      toast.error(`Could not ${verb.toLowerCase()} the tab. Try again.`)
+      toast.error(`Could not ${actionLabel} the tab. Try again.`)
     } finally {
-      setPending(false)
-      await refresh()
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 
   const handlePinToggle = () =>
-    runAction(tab.pinned ? 'Unpinned' : 'Pinned', () => gateway.setPinned([tab.id], !tab.pinned))
+    runAction(tab.pinned ? 'Unpinned' : 'Pinned', tab.pinned ? 'unpin' : 'pin', () =>
+      gateway.setPinned([tab.id], !tab.pinned),
+    )
   const handleMuteToggle = () =>
-    runAction(tab.muted ? 'Unmuted' : 'Muted', () => gateway.setMuted([tab.id], !tab.muted))
-  const handleReload = () => runAction('Reloaded', () => gateway.reloadTabs([tab.id]))
-  const handleDiscard = () => runAction('Discarded', () => gateway.discardTabs([tab.id]))
+    runAction(tab.muted ? 'Unmuted' : 'Muted', tab.muted ? 'unmute' : 'mute', () =>
+      gateway.setMuted([tab.id], !tab.muted),
+    )
+  const handleReload = () => runAction('Reloaded', 'reload', () => gateway.reloadTabs([tab.id]))
+  const handleDiscard = () => runAction('Discarded', 'discard', () => gateway.discardTabs([tab.id]))
 
   const handleClose = async () => {
     setPending(true)
@@ -79,8 +90,11 @@ export function TabActionsMenu({
     } catch {
       toast.error('Could not close the tab. Try again.')
     } finally {
-      setPending(false)
-      await refresh()
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 

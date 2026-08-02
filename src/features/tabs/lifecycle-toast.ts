@@ -53,10 +53,15 @@ export function showCloseToast(
 
         undone = true
 
-        void undoClose(gateway, repository).then(async (undoResult) => {
-          await refresh()
-          showBulkResultToast(undoResult, 'Restored')
-        })
+        void undoClose(gateway, repository).then(
+          async (undoResult) => {
+            await refresh()
+            showBulkResultToast(undoResult, 'Restored')
+          },
+          () => {
+            toast.error('Could not restore the tabs. Try again.')
+          },
+        )
       },
     },
   })

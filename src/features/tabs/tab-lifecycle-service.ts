@@ -15,11 +15,21 @@ export async function closeTabs(
   gateway: BrowserGateway,
   repository: CloseRepository,
 ): Promise<BulkResult> {
-  const snapshot = buildCloseSnapshot(tabs, groupsById)
+  await repository.save(buildCloseSnapshot(tabs, groupsById))
 
-  await repository.save(snapshot)
+  const result = await gateway.removeTabs(tabs.map((tab) => tab.id))
 
-  return gateway.removeTabs(tabs.map((tab) => tab.id))
+  if (result.failed.length > 0) {
+    // Some tabs were never actually removed. Narrow the recovery snapshot to
+    // only the tabs that really closed, so Undo can't recreate a duplicate
+    // of a tab that's still open.
+    const succeededIds = new Set(result.succeeded)
+    const actuallyClosed = tabs.filter((tab) => succeededIds.has(tab.id))
+
+    await repository.save(buildCloseSnapshot(actuallyClosed, groupsById))
+  }
+
+  return result
 }
 
 /**

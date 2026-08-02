@@ -56,6 +56,36 @@ describe('createCloseRepository', () => {
 
     await expect(repository.load()).resolves.toBeNull()
   })
+
+  it('treats a snapshot with a malformed tab entry as no snapshot', async () => {
+    const storage = createStorage({
+      lastClosedTabs: { closedAt: 1000, tabs: [{ url: 42, title: 'Example' }] },
+    })
+    const repository = createCloseRepository(storage)
+
+    await expect(repository.load()).resolves.toBeNull()
+  })
+
+  it('treats a snapshot with a malformed group entry as no snapshot', async () => {
+    const storage = createStorage({
+      lastClosedTabs: {
+        closedAt: 1000,
+        tabs: [
+          {
+            url: 'https://example.com',
+            title: 'Example',
+            pinned: false,
+            windowId: 1,
+            index: 0,
+            group: { title: 'Research', color: 'not-a-real-color' },
+          },
+        ],
+      },
+    })
+    const repository = createCloseRepository(storage)
+
+    await expect(repository.load()).resolves.toBeNull()
+  })
 })
 
 function createSnapshot(closedAt = 1000): CloseSnapshot {

@@ -23,7 +23,7 @@ afterEach(() => {
 })
 
 describe('ManageTabsMenu', () => {
-  it('only sends active and already-discarded tabs' + "' ids away from Discard", async () => {
+  it('excludes active and already-discarded tabs from the Discard call', async () => {
     // Select an active tab, a discarded tab, and a normal tab. Only the
     // normal tab's id should reach the gateway's discard call.
     const user = userEvent.setup()

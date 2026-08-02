@@ -1,4 +1,16 @@
-import type { TabDescriptor } from '../../domain/browser'
+import type { TabDescriptor, TabGroupColor } from '../../domain/browser'
+
+const GROUP_COLORS: ReadonlySet<TabGroupColor> = new Set([
+  'grey',
+  'blue',
+  'red',
+  'yellow',
+  'green',
+  'pink',
+  'purple',
+  'cyan',
+  'orange',
+])
 
 const storageKey = 'lastClosedTabs'
 
@@ -84,5 +96,40 @@ function isCloseSnapshot(value: unknown): value is CloseSnapshot {
 
   const candidate = value as Partial<CloseSnapshot>
 
-  return typeof candidate.closedAt === 'number' && Array.isArray(candidate.tabs)
+  return (
+    typeof candidate.closedAt === 'number' &&
+    Array.isArray(candidate.tabs) &&
+    candidate.tabs.every(isDescriptorEntry)
+  )
+}
+
+function isDescriptorEntry(value: unknown): value is CloseSnapshot['tabs'][number] {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Partial<CloseSnapshot['tabs'][number]>
+
+  return (
+    typeof candidate.url === 'string' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.pinned === 'boolean' &&
+    typeof candidate.windowId === 'number' &&
+    typeof candidate.index === 'number' &&
+    (candidate.group === undefined || isGroupDescriptor(candidate.group))
+  )
+}
+
+function isGroupDescriptor(value: unknown): value is NonNullable<TabDescriptor['group']> {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Partial<NonNullable<TabDescriptor['group']>>
+
+  return (
+    typeof candidate.title === 'string' &&
+    typeof candidate.color === 'string' &&
+    GROUP_COLORS.has(candidate.color as TabGroupColor)
+  )
 }

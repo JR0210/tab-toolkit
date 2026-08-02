@@ -17,10 +17,10 @@ interface RestoredTab {
 }
 
 /**
- * Recreates the tabs from a CloseSnapshot. Descriptor entries are identified
- * in the returned BulkResult by their original index within
- * `snapshot.tabs` — there is no other stable id for a tab that no longer
- * exists.
+ * Recreates the tabs from a CloseSnapshot. `failed` entries are identified by
+ * their original index within `snapshot.tabs` — there is no other stable id
+ * for a descriptor that was never (re)created. `succeeded` entries are the
+ * real ids of the newly created tabs.
  */
 export async function restoreDescriptors(
   snapshot: CloseSnapshot,

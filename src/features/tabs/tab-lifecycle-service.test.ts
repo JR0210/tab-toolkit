@@ -42,6 +42,28 @@ describe('closeTabs', () => {
     expect(removeTabs).not.toHaveBeenCalled()
   })
 
+  it('narrows the saved snapshot to only the tabs that actually closed when removal partially fails', async () => {
+    const save = vi.fn().mockResolvedValue(undefined)
+    const removeTabs = vi
+      .fn()
+      .mockResolvedValue({ succeeded: [1], failed: [{ id: 2, message: 'No tab with id: 2' }] })
+    const gateway = createStubBrowserGateway({ removeTabs })
+    const repository = createRepository({ save })
+    const tabs = [createTab({ id: 1 }), createTab({ id: 2, index: 1 })]
+
+    const result = await closeTabs(tabs, new Map(), gateway, repository)
+
+    expect(save).toHaveBeenCalledTimes(2)
+    // The second save (after removeTabs resolves) must only cover tab 1 —
+    // tab 2 failed to close and is still open, so undo must not recreate it.
+    expect(save).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        tabs: [expect.objectContaining({ url: tabs[0].url })],
+      }),
+    )
+    expect(result.failed).toEqual([{ id: 2, message: 'No tab with id: 2' }])
+  })
+
   it('resolves each tab group from the provided groupsById map', async () => {
     const save = vi.fn().mockResolvedValue(undefined)
     const gateway = createStubBrowserGateway({
