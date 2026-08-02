@@ -43,7 +43,7 @@ export function csvCell(value: unknown): string {
   return needsQuoting ? `"${neutralized.replaceAll('"', '""')}"` : neutralized
 }
 
-export function serializeCsv<T extends Record<string, unknown>>(
+export function serializeCsv<T extends object>(
   rows: readonly T[],
   fields: readonly (keyof T & string)[],
 ): string {
@@ -53,7 +53,7 @@ export function serializeCsv<T extends Record<string, unknown>>(
   return [header, ...body].join('\r\n')
 }
 
-export function serializeJson<T extends Record<string, unknown>>(
+export function serializeJson<T extends object>(
   rows: readonly T[],
   fields: readonly (keyof T & string)[],
 ): string {

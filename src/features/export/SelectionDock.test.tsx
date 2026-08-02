@@ -97,6 +97,15 @@ describe('SelectionDock', () => {
     )
   })
 
+  it('opens the export dialog with the selected tabs when Export is clicked', async () => {
+    const user = userEvent.setup()
+    renderDock({ preselectedIds: [2, 3], copyFormat: 'urls' })
+
+    await user.click(await screen.findByRole('button', { name: 'Export' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Export tabs' })).toBeVisible()
+  })
+
   it('copies only the explicitly given tabs, ignoring the currently selected set in context', async () => {
     // Catches a row-level copy action that silently reads selectedTabs from context
     // instead of the explicit tab list it was called with.

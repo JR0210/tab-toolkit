@@ -1,8 +1,10 @@
-import { ChevronDownIcon, ClipboardIcon, XIcon } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDownIcon, ClipboardIcon, DownloadIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TabRecord } from '../../domain/browser'
 import { createClipboardGateway } from '../../platform/clipboard-gateway'
 import type { ClipboardGateway } from '../../platform/clipboard-gateway'
+import type { DownloadGateway } from '../../platform/download-gateway'
 import type { CopyFormat } from '../../shared/settings/settings'
 import { useSettings } from '../../shared/settings/use-settings'
 import { Button } from '../../shared/ui/button'
@@ -13,15 +15,23 @@ import {
   DropdownMenuTrigger,
 } from '../../shared/ui/dropdown-menu'
 import { useTabInteractions } from '../tabs/use-tab-interactions'
+import { useTabs } from '../tabs/use-tabs'
 import { COPY_FORMAT_LABELS, COPY_FORMATS, copyTabsToClipboard } from './copy-actions'
+import { ExportDialog } from './ExportDialog'
 
 interface SelectionDockProps {
   clipboard?: ClipboardGateway
+  download?: DownloadGateway
 }
 
-export function SelectionDock({ clipboard = createClipboardGateway() }: SelectionDockProps) {
+export function SelectionDock({
+  clipboard = createClipboardGateway(),
+  download,
+}: SelectionDockProps) {
   const { selectedTabs, clearSelection } = useTabInteractions()
+  const { snapshot } = useTabs()
   const { settings, updateSettings } = useSettings()
+  const [exportOpen, setExportOpen] = useState(false)
 
   if (selectedTabs.length === 0) {
     return null
@@ -91,13 +101,26 @@ export function SelectionDock({ clipboard = createClipboardGateway() }: Selectio
           </DropdownMenu>
         </div>
 
-        {/* Export lands here (Task 4). Manage/Close land here in Loop 05+. */}
+        <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+          <DownloadIcon />
+          Export
+        </Button>
+
+        {/* Manage/Close land here in Loop 05+. */}
 
         <Button variant="ghost" size="sm" onClick={clearSelection}>
           <XIcon />
           Clear
         </Button>
       </div>
+
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        tabs={selectedTabs}
+        groups={snapshot?.groups ?? []}
+        download={download}
+      />
     </div>
   )
 }
