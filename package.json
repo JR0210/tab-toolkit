@@ -17,7 +17,8 @@
     "icons": "node scripts/generate-icons.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
     "verify:build": "node scripts/verify-build.mjs",
-    "verify:release": "npm run check && npm test && npm run build && npm run verify:manifest && npm run verify:build"
+    "verify:release": "npm run check && npm test && npm run build && npm run verify:manifest && npm run verify:build",
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
