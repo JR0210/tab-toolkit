@@ -89,12 +89,15 @@ export function AddToGroupDialog({ open, onOpenChange, tabs }: AddToGroupDialogP
 
       const result = await addToChosenGroup(tabs, target, gateway)
       showBulkResultToast(result, 'Grouped')
-      await refresh()
       onOpenChange(false)
     } catch {
       toast.error('Could not add the tabs to a group. Try again.')
     } finally {
-      setPending(false)
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 

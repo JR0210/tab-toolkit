@@ -75,17 +75,28 @@ describe('DuplicatesDialog', () => {
     const save = vi.fn().mockRejectedValue(new Error('storage unavailable'))
     const gateway = createStubBrowserGateway()
     const onOpenChange = vi.fn()
+    const refresh = vi.fn().mockResolvedValue(undefined)
     const tabs = [
       tab({ id: 1, url: 'https://example.com/a', index: 0 }),
       tab({ id: 2, url: 'https://example.com/a', index: 1 }),
     ]
 
-    renderDialog({ tabs, gateway, onOpenChange, repository: createRepository({ save }) })
+    renderDialog({
+      tabs,
+      gateway,
+      onOpenChange,
+      refresh,
+      repository: createRepository({ save }),
+    })
 
     await user.click(await screen.findByRole('button', { name: /close 1 duplicate tab/i }))
 
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
     expect(await screen.findByText(/could not/i)).toBeInTheDocument()
+    // closeTabs can reject even after tabs were actually removed (e.g. the
+    // undo-snapshot save failing post-removal), so the live snapshot must
+    // still be refreshed even on this failure path.
+    expect(refresh).toHaveBeenCalled()
   })
 })
 

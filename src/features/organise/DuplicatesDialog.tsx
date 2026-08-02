@@ -65,14 +65,20 @@ export function DuplicatesDialog({
           ? 'Closed 1 duplicate tab'
           : `Closed ${result.succeeded.length} duplicate tabs`,
       )
-      await refresh()
       onOpenChange(false)
     } catch {
-      // Storage/removal failed before anything committed -- keep the dialog
-      // open so the user can retry instead of losing their choices.
+      // closeTabs can still reject after tabs were actually removed (e.g. if
+      // the undo-snapshot save fails post-removal), so this isn't always "no
+      // change happened" -- refresh() below always runs regardless. Keep the
+      // dialog open here so the user can retry instead of losing their
+      // choices.
       toast.error('Could not close the duplicate tabs. Try again.')
     } finally {
-      setPending(false)
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
     }
   }
 
