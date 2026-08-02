@@ -53,9 +53,7 @@ describe('validateWorkspace', () => {
 
   it('rejects a workspace whose tabs contain a missing URL', () => {
     expect(
-      validateWorkspace(
-        createRawWorkspace({ tabs: [{ url: '', title: 'Blank', pinned: false }] }),
-      ),
+      validateWorkspace(createRawWorkspace({ tabs: [{ url: '', title: 'Blank', pinned: false }] })),
     ).toBeNull()
   })
 
@@ -128,8 +126,16 @@ describe('createWorkspaceRepository', () => {
   it('put() replaces-by-id (upsert) rather than duplicating an entry', async () => {
     const storage = createStorage({})
     const repository = createWorkspaceRepository(storage)
-    const original = createWorkspace({ id: 'a', name: 'Original', updatedAt: '2026-08-01T10:00:00.000Z' })
-    const renamed = createWorkspace({ id: 'a', name: 'Renamed', updatedAt: '2026-08-02T10:00:00.000Z' })
+    const original = createWorkspace({
+      id: 'a',
+      name: 'Original',
+      updatedAt: '2026-08-01T10:00:00.000Z',
+    })
+    const renamed = createWorkspace({
+      id: 'a',
+      name: 'Renamed',
+      updatedAt: '2026-08-02T10:00:00.000Z',
+    })
 
     await repository.put(original)
     await repository.put(renamed)

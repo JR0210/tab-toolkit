@@ -48,7 +48,13 @@ describe('WorkspacesProvider', () => {
       tabs: [
         createTab({ id: 1, windowId: 1, index: 0, url: 'https://a.example.com/', title: 'Tab A' }),
         createTab({ id: 2, windowId: 1, index: 1, url: 'https://b.example.com/', title: 'Tab B' }),
-        createTab({ id: 3, windowId: 1, index: 2, url: 'chrome://extensions', title: 'Extensions' }),
+        createTab({
+          id: 3,
+          windowId: 1,
+          index: 2,
+          url: 'chrome://extensions',
+          title: 'Extensions',
+        }),
       ],
       groups: [],
       currentWindowId: 1,
@@ -123,9 +129,11 @@ describe('WorkspacesProvider', () => {
     const existing = createStoredWorkspace()
     const deleteDeferred = createDeferred<void>()
     let deleted = false
-    const list = vi.fn().mockImplementation(() =>
-      Promise.resolve({ workspaces: deleted ? [] : [existing], skippedCount: 0 }),
-    )
+    const list = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ workspaces: deleted ? [] : [existing], skippedCount: 0 }),
+      )
     const del = vi.fn().mockImplementation(() => deleteDeferred.promise)
     const repository = createRepository({ list, delete: del })
 
@@ -149,9 +157,11 @@ describe('WorkspacesProvider', () => {
     const existing = createStoredWorkspace()
     const put = vi.fn().mockResolvedValue(undefined)
     let deleted = false
-    const list = vi.fn().mockImplementation(() =>
-      Promise.resolve({ workspaces: deleted ? [] : [existing], skippedCount: 0 }),
-    )
+    const list = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ workspaces: deleted ? [] : [existing], skippedCount: 0 }),
+      )
     const del = vi.fn().mockImplementation(() => {
       deleted = true
       return Promise.resolve()

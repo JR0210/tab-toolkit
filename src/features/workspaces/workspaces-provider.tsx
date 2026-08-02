@@ -14,9 +14,17 @@ interface WorkspacesProviderProps {
   repository?: WorkspaceRepository
 }
 
+// A stable module-level default so the repository identity never changes
+// across renders when no `repository` prop is passed. Constructing it here
+// is safe -- createChromeWorkspaceRepository() resolves the chrome API
+// lazily per call, not at construction -- but a *fresh* object on every
+// render (e.g. an inline default) would recreate `refresh` every render and
+// re-trigger the mount effect below in an endless loop.
+const defaultRepository = createChromeWorkspaceRepository()
+
 export function WorkspacesProvider({
   children,
-  repository = createChromeWorkspaceRepository(),
+  repository = defaultRepository,
 }: PropsWithChildren<WorkspacesProviderProps>) {
   const { snapshot } = useTabs()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
