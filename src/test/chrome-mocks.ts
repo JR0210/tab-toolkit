@@ -63,6 +63,7 @@ export function createChromeBrowserApiMock() {
   const createTab = vi.fn<ChromeBrowserApi['tabs']['create']>().mockResolvedValue(createChromeTab())
   const groupTabs = vi.fn<ChromeBrowserApi['tabs']['group']>().mockResolvedValue(1)
   const moveTabs = vi.fn<ChromeBrowserApi['tabs']['move']>().mockResolvedValue([])
+  const ungroupTabs = vi.fn<ChromeBrowserApi['tabs']['ungroup']>().mockResolvedValue(undefined)
   const getWindow = vi
     .fn<ChromeBrowserApi['windows']['get']>()
     .mockResolvedValue(createChromeWindow())
@@ -91,6 +92,7 @@ export function createChromeBrowserApiMock() {
         create: createTab,
         group: groupTabs,
         move: moveTabs,
+        ungroup: ungroupTabs,
       },
       tabGroups: {
         query: queryTabGroups,
@@ -107,6 +109,7 @@ export function createChromeBrowserApiMock() {
     createTab,
     groupTabs,
     moveTabs,
+    ungroupTabs,
     getWindow,
     createWindow,
     queryTabGroups,

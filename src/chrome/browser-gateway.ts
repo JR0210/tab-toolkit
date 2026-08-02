@@ -24,6 +24,7 @@ export interface ChromeBrowserApi {
     create(createProperties: chrome.tabs.CreateProperties): Promise<chrome.tabs.Tab>
     group(options: chrome.tabs.GroupOptions): Promise<number>
     move(tabIds: number[], moveProperties: chrome.tabs.MoveProperties): Promise<chrome.tabs.Tab[]>
+    ungroup(tabIds: number | [number, ...number[]]): Promise<void>
   }
   tabGroups: {
     query(queryInfo: chrome.tabGroups.QueryInfo): Promise<chrome.tabGroups.TabGroup[]>
@@ -53,6 +54,9 @@ export interface BrowserGateway {
   createWindowWithTab(tabId: number): Promise<{ windowId: number; tabId: number }>
   moveTabs(tabIds: readonly number[], windowId: number, index: number): Promise<BulkResult>
   moveTab(tabId: number, windowId: number, index: number): Promise<void>
+  groupTabs(tabIds: readonly number[], windowId: number, groupId?: number): Promise<number>
+  updateGroup(groupId: number, update: { title: string; color: TabGroupColor }): Promise<void>
+  ungroupTabs(tabIds: readonly number[]): Promise<void>
 }
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
@@ -189,6 +193,23 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
     },
     async moveTab(tabId, windowId, index) {
       await chrome.tabs.move([tabId], { windowId, index })
+    },
+    async groupTabs(tabIds, windowId, groupId) {
+      return chrome.tabs.group({
+        tabIds: [...tabIds] as [number, ...number[]],
+        groupId,
+        createProperties: groupId === undefined ? { windowId } : undefined,
+      })
+    },
+    async updateGroup(groupId, update) {
+      await chrome.tabGroups.update(groupId, { title: update.title, color: update.color })
+    },
+    async ungroupTabs(tabIds) {
+      if (tabIds.length === 0) {
+        return
+      }
+
+      await chrome.tabs.ungroup([tabIds[0], ...tabIds.slice(1)] as [number, ...number[]])
     },
   }
 }

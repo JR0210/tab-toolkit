@@ -220,4 +220,120 @@ describe('createChromeBrowserGateway window and tab creation', () => {
       color: 'yellow',
     })
   })
+
+  it('creates a window carrying an existing tab', async () => {
+    const { api, createWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(createChromeWindow({ id: 41 }))
+    const gateway = createChromeBrowserGateway(api)
+
+    const result = await gateway.createWindowWithTab(7)
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith({
+      tabId: 7,
+      type: 'normal',
+      focused: true,
+    })
+    expect(result).toEqual({ windowId: 41, tabId: 7 })
+  })
+
+  it('rejects createWindowWithTab when Chrome does not return a window id', async () => {
+    const { api, createWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(undefined)
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.createWindowWithTab(7)).rejects.toThrow()
+  })
+
+  it('moves tabs with a single batched call when it succeeds', async () => {
+    const { api, moveTabs } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    const result = await gateway.moveTabs([1, 2], 9, -1)
+
+    expect(moveTabs).toHaveBeenCalledExactlyOnceWith([1, 2], { windowId: 9, index: -1 })
+    expect(result).toEqual({ succeeded: [1, 2], failed: [] })
+  })
+
+  it('retries moveTabs per tab when the batched call rejects', async () => {
+    const { api, moveTabs } = createChromeBrowserApiMock()
+    moveTabs.mockImplementation((tabIds) => {
+      if (tabIds.length > 1) {
+        return Promise.reject(new Error('batch failed'))
+      }
+      if (tabIds[0] === 2) {
+        return Promise.reject(new Error('No tab with id: 2'))
+      }
+      return Promise.resolve([])
+    })
+    const gateway = createChromeBrowserGateway(api)
+
+    const result = await gateway.moveTabs([1, 2], 9, -1)
+
+    expect(result).toEqual({ succeeded: [1], failed: [{ id: 2, message: 'No tab with id: 2' }] })
+  })
+
+  it('moves a single tab', async () => {
+    const { api, moveTabs } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.moveTab(3, 9, 2)
+
+    expect(moveTabs).toHaveBeenCalledExactlyOnceWith([3], { windowId: 9, index: 2 })
+  })
+
+  it('groups tabs into a new group when no groupId is given', async () => {
+    const { api, groupTabs } = createChromeBrowserApiMock()
+    groupTabs.mockResolvedValue(5)
+    const gateway = createChromeBrowserGateway(api)
+
+    const groupId = await gateway.groupTabs([1, 2], 9)
+
+    expect(groupTabs).toHaveBeenCalledExactlyOnceWith({
+      tabIds: [1, 2],
+      groupId: undefined,
+      createProperties: { windowId: 9 },
+    })
+    expect(groupId).toBe(5)
+  })
+
+  it('adds tabs to an existing group when a groupId is given', async () => {
+    const { api, groupTabs } = createChromeBrowserApiMock()
+    groupTabs.mockResolvedValue(5)
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.groupTabs([1, 2], 9, 5)
+
+    expect(groupTabs).toHaveBeenCalledExactlyOnceWith({
+      tabIds: [1, 2],
+      groupId: 5,
+      createProperties: undefined,
+    })
+  })
+
+  it('updates a group title and color', async () => {
+    const { api, updateTabGroup } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.updateGroup(5, { title: 'Research', color: 'cyan' })
+
+    expect(updateTabGroup).toHaveBeenCalledExactlyOnceWith(5, { title: 'Research', color: 'cyan' })
+  })
+
+  it('ungroups tabs', async () => {
+    const { api, ungroupTabs } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.ungroupTabs([1, 2])
+
+    expect(ungroupTabs).toHaveBeenCalledExactlyOnceWith([1, 2])
+  })
+
+  it('does nothing when ungrouping an empty list', async () => {
+    const { api, ungroupTabs } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.ungroupTabs([])
+
+    expect(ungroupTabs).not.toHaveBeenCalled()
+  })
 })
