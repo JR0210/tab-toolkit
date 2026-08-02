@@ -95,6 +95,39 @@ describe('SettingsDialog', () => {
     expect(await screen.findByRole('radio', { name: 'Dark' })).toBeChecked()
   })
 
+  it('does not throw an unhandled rejection when a settings save fails', async () => {
+    const user = userEvent.setup()
+    const repository = {
+      load: vi.fn().mockResolvedValue(defaultSettings),
+      save: vi.fn().mockRejectedValue(new Error('storage unavailable')),
+      reset: vi.fn().mockResolvedValue(undefined),
+    }
+
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(createStubMediaQueryList()))
+    render(
+      <BrowserProvider gateway={createStubBrowserGateway()}>
+        <SettingsProvider repository={repository}>
+          <ShortcutHandlersProvider>
+            <SettingsDialog open onOpenChange={() => {}} />
+          </ShortcutHandlersProvider>
+        </SettingsProvider>
+      </BrowserProvider>,
+    )
+    await screen.findByRole('radio', { name: 'System' })
+
+    // updateSettings() rejects on a save failure (SettingsProvider re-throws
+    // after recording persistenceError) -- every onChange in this dialog
+    // must catch that itself, since it's invoked via a bare `void` call with
+    // no surrounding awaiter to catch it.
+    await user.click(screen.getByRole('radio', { name: 'Dark' }))
+
+    await waitFor(() => expect(repository.save).toHaveBeenCalled())
+    // Reaching here without vitest reporting an unhandled rejection is the
+    // actual assertion; this just gives the microtask queue a moment to
+    // settle so a real unhandled rejection would have surfaced.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+
   it('opens the repository README with Help & documentation', async () => {
     const user = userEvent.setup()
     const openUrl = vi.fn().mockResolvedValue(undefined)

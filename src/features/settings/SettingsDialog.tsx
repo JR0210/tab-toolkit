@@ -42,7 +42,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const handleReset = () => {
-    void updateSettings(defaultSettings)
+    void updateSettings(defaultSettings).catch(() => undefined)
     // Reaches into TabsView's live filter state and AppShell's view state --
     // both live outside this dialog's own subtree (it's rendered from
     // Header) -- via the same registration mechanism the keyboard shortcuts
@@ -64,7 +64,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             name="settings-theme"
             options={THEME_LABELS}
             value={settings.theme}
-            onChange={(theme) => void updateSettings({ theme })}
+            onChange={(theme) => void updateSettings({ theme }).catch(() => undefined)}
           />
 
           <Separator />
@@ -74,7 +74,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             name="settings-scope"
             options={SCOPE_LABELS}
             value={settings.scope}
-            onChange={(scope) => void updateSettings({ scope })}
+            onChange={(scope) => void updateSettings({ scope }).catch(() => undefined)}
           />
 
           <Separator />
@@ -85,7 +85,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             options={COPY_FORMAT_LABELS}
             optionOrder={COPY_FORMATS}
             value={settings.copyFormat}
-            onChange={(copyFormat) => void updateSettings({ copyFormat })}
+            onChange={(copyFormat) => void updateSettings({ copyFormat }).catch(() => undefined)}
           />
 
           <Separator />

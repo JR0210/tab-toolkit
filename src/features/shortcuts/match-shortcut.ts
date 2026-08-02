@@ -91,7 +91,14 @@ export function isEditableTarget(target: EventTarget | null): boolean {
     return true
   }
 
-  return target.closest('[contenteditable="true"]') !== null
+  // `contenteditable` is a boolean-ish attribute: both `contenteditable=""`
+  // and a bare `contenteditable` (no value) mean "true", same as an explicit
+  // `contenteditable="true"` -- only a literal "false" opts out. Find the
+  // NEAREST ancestor with the attribute at all (not just ones set to
+  // "true") so an explicit `contenteditable="false"` correctly wins over a
+  // further-out editable ancestor instead of being skipped past.
+  const nearest = target.closest('[contenteditable]')
+  return nearest !== null && nearest.getAttribute('contenteditable') !== 'false'
 }
 
 /**

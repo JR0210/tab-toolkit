@@ -152,6 +152,32 @@ describe('isEditableTarget', () => {
     expect(isEditableTarget(document.createElement('div'))).toBe(false)
     expect(isEditableTarget(null)).toBe(false)
   })
+
+  it('treats contenteditable="" and a bare contenteditable attribute as editable', () => {
+    const emptyString = document.createElement('div')
+    emptyString.setAttribute('contenteditable', '')
+    expect(isEditableTarget(emptyString)).toBe(true)
+
+    const bare = document.createElement('div')
+    bare.setAttribute('contenteditable', '')
+    bare.toggleAttribute('contenteditable', true)
+    expect(isEditableTarget(bare)).toBe(true)
+  })
+
+  it('lets a nearer contenteditable="false" override a further-out editable ancestor', () => {
+    const wrapper = document.createElement('div')
+    wrapper.setAttribute('contenteditable', 'true')
+    const disabled = document.createElement('div')
+    disabled.setAttribute('contenteditable', 'false')
+    const span = document.createElement('span')
+    disabled.appendChild(span)
+    wrapper.appendChild(disabled)
+
+    expect(isEditableTarget(disabled)).toBe(false)
+    expect(isEditableTarget(span)).toBe(false)
+    // The wrapper itself is still editable -- only its "false" descendant opts out.
+    expect(isEditableTarget(wrapper)).toBe(true)
+  })
 })
 
 describe('matchShortcut', () => {
