@@ -158,9 +158,35 @@ describe('createChromeBrowserGateway window and tab creation', () => {
     expect(result).toEqual({ windowId: 55, tabId: 66 })
   })
 
+  it('falls back to a populated windows.get() when windows.create() does not return the new tab', async () => {
+    // windows.create()'s CreateData has no `populate` option, so its result
+    // can legitimately omit `tabs` even though the window was created fine.
+    const { api, createWindow, getWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(createChromeWindow({ id: 55, tabs: undefined }))
+    getWindow.mockResolvedValue(
+      createChromeWindow({ id: 55, tabs: [createChromeTab({ id: 66, windowId: 55 })] }),
+    )
+    const gateway = createChromeBrowserGateway(api)
+
+    const result = await gateway.createWindow('https://example.com')
+
+    expect(getWindow).toHaveBeenCalledExactlyOnceWith(55, { populate: true })
+    expect(result).toEqual({ windowId: 55, tabId: 66 })
+  })
+
   it('rejects when Chrome cannot create the window or its first tab', async () => {
-    const { api, createWindow } = createChromeBrowserApiMock()
+    const { api, createWindow, getWindow } = createChromeBrowserApiMock()
     createWindow.mockResolvedValue(undefined)
+    getWindow.mockResolvedValue(createChromeWindow({ tabs: undefined }))
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.createWindow('https://example.com')).rejects.toThrow()
+  })
+
+  it('rejects when the create fallback also cannot find the new tab', async () => {
+    const { api, createWindow, getWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(createChromeWindow({ id: 55, tabs: undefined }))
+    getWindow.mockResolvedValue(createChromeWindow({ id: 55, tabs: undefined }))
     const gateway = createChromeBrowserGateway(api)
 
     await expect(gateway.createWindow('https://example.com')).rejects.toThrow()

@@ -7,7 +7,10 @@ export interface ChromeBrowserApi {
     getAll(options: chrome.windows.QueryOptions): Promise<chrome.windows.Window[]>
     getCurrent(): Promise<chrome.windows.Window>
     update(windowId: number, updateInfo: chrome.windows.UpdateInfo): Promise<chrome.windows.Window>
-    get(windowId: number): Promise<chrome.windows.Window>
+    get(
+      windowId: number,
+      queryOptions?: chrome.windows.QueryOptions,
+    ): Promise<chrome.windows.Window>
     create(createData: chrome.windows.CreateData): Promise<chrome.windows.Window | undefined>
   }
   tabs: {
@@ -117,9 +120,19 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
     },
     async createWindow(url) {
       const window = await chrome.windows.create({ url, focused: false })
-      const tab = window?.tabs?.[0]
 
-      if (!window || typeof window.id !== 'number' || !tab || typeof tab.id !== 'number') {
+      if (!window || typeof window.id !== 'number') {
+        throw new Error('Chrome did not create the restored window')
+      }
+
+      // windows.create()'s CreateData has no `populate` option (unlike
+      // windows.get()/getAll()), so its result doesn't reliably include the
+      // tab it just created. Fall back to a populated windows.get() instead
+      // of assuming creation failed.
+      const tab =
+        window.tabs?.[0] ?? (await chrome.windows.get(window.id, { populate: true })).tabs?.[0]
+
+      if (!tab || typeof tab.id !== 'number') {
         throw new Error('Chrome did not create the restored window')
       }
 
