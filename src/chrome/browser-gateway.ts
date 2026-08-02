@@ -1,8 +1,13 @@
 import type { BulkResult, TabGroupColor, TabSnapshot } from '../domain/browser'
 import { runBulk } from '../features/tabs/bulk-result'
+import type { PlatformFamily } from '../platform/platform'
+import { toPlatformFamily } from '../platform/platform'
 import { mapChromeTab, mapChromeTabGroup } from './tab-mapper'
 
 export interface ChromeBrowserApi {
+  runtime: {
+    getPlatformInfo(): Promise<chrome.runtime.PlatformInfo>
+  }
   windows: {
     getAll(options: chrome.windows.QueryOptions): Promise<chrome.windows.Window[]>
     getCurrent(): Promise<chrome.windows.Window>
@@ -36,6 +41,7 @@ export interface ChromeBrowserApi {
 }
 
 export interface BrowserGateway {
+  getPlatformInfo(): Promise<PlatformFamily>
   getSnapshot(): Promise<TabSnapshot>
   activateTab(tabId: number, windowId: number): Promise<void>
   setPinned(ids: readonly number[], pinned: boolean): Promise<BulkResult>
@@ -61,6 +67,17 @@ export interface BrowserGateway {
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
   return {
+    async getPlatformInfo() {
+      try {
+        const info = await chrome.runtime.getPlatformInfo()
+        return toPlatformFamily(info)
+      } catch {
+        // Never let a rejected/unsupported getPlatformInfo() call default to
+        // 'mac' -- an unknown platform should always render the non-mac
+        // (Ctrl/Delete) labels, not accidentally show Command.
+        return 'non-mac'
+      }
+    },
     async getSnapshot() {
       const [windows, currentWindow, groups] = await Promise.all([
         chrome.windows.getAll({ populate: true, windowTypes: ['normal'] }),
