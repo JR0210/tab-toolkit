@@ -55,6 +55,11 @@ export function createChromeBrowserApiMock() {
     .fn<ChromeBrowserApi['windows']['update']>()
     .mockResolvedValue(createChromeWindow())
   const updateTab = vi.fn<ChromeBrowserApi['tabs']['update']>().mockResolvedValue(createChromeTab())
+  const reloadTab = vi.fn<ChromeBrowserApi['tabs']['reload']>().mockResolvedValue(undefined)
+  const discardTab = vi
+    .fn<ChromeBrowserApi['tabs']['discard']>()
+    .mockResolvedValue(createChromeTab())
+  const removeTabs = vi.fn<ChromeBrowserApi['tabs']['remove']>().mockResolvedValue(undefined)
   const queryTabGroups = vi.fn<ChromeBrowserApi['tabGroups']['query']>().mockResolvedValue([])
 
   return {
@@ -66,6 +71,9 @@ export function createChromeBrowserApiMock() {
       },
       tabs: {
         update: updateTab,
+        reload: reloadTab,
+        discard: discardTab,
+        remove: removeTabs,
       },
       tabGroups: {
         query: queryTabGroups,
@@ -75,6 +83,9 @@ export function createChromeBrowserApiMock() {
     getCurrent,
     updateWindow,
     updateTab,
+    reloadTab,
+    discardTab,
+    removeTabs,
     queryTabGroups,
   }
 }

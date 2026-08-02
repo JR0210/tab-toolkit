@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { BrowserProvider } from '../../chrome/browser-context'
 import type { BrowserGateway } from '../../chrome/browser-gateway'
 import type { TabSnapshot } from '../../domain/browser'
+import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 import { TabsProvider } from './tabs-provider'
 import { useTabs } from './use-tabs'
 
@@ -204,7 +205,7 @@ function createGateway({
   let snapshotIndex = 0
   let activationIndex = 0
 
-  return {
+  return createStubBrowserGateway({
     getSnapshot(): Promise<TabSnapshot> {
       const snapshot = snapshots[snapshotIndex]
       snapshotIndex += 1
@@ -233,7 +234,7 @@ function createGateway({
 
       return Promise.resolve()
     },
-  }
+  })
 }
 
 function createSnapshot(capturedAt: number): TabSnapshot {

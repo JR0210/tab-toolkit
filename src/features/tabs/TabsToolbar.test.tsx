@@ -6,6 +6,7 @@ import type { BrowserGateway } from '../../chrome/browser-gateway'
 import type { TabGroupRecord, TabRecord, TabSnapshot } from '../../domain/browser'
 import { createSettingsRepository } from '../../shared/settings/settings-repository'
 import type { SettingsStorageArea } from '../../shared/settings/settings-repository'
+import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 
 afterEach(() => {
   document.documentElement.classList.remove('dark')
@@ -184,12 +185,11 @@ function renderApp(snapshot: TabSnapshot) {
 }
 
 function createGateway(snapshot: TabSnapshot): BrowserGateway {
-  return {
+  return createStubBrowserGateway({
     async getSnapshot() {
       return snapshot
     },
-    async activateTab() {},
-  }
+  })
 }
 
 function createDiscoverySnapshot(): TabSnapshot {

@@ -6,6 +6,7 @@ import type { BrowserGateway } from './chrome/browser-gateway'
 import type { TabSnapshot } from './domain/browser'
 import { createSettingsRepository } from './shared/settings/settings-repository'
 import type { SettingsStorageArea } from './shared/settings/settings-repository'
+import { createStubBrowserGateway } from './test/browser-gateway-mock'
 
 afterEach(() => {
   document.documentElement.classList.remove('dark')
@@ -141,12 +142,11 @@ function renderApp({
 }
 
 function createPendingBrowserGateway(): BrowserGateway {
-  return {
+  return createStubBrowserGateway({
     getSnapshot() {
       return new Promise<TabSnapshot>(() => undefined)
     },
-    async activateTab() {},
-  }
+  })
 }
 
 function createFlakyStorage(): SettingsStorageArea {
