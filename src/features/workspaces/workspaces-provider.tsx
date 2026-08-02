@@ -54,9 +54,17 @@ export function WorkspacesProvider({
 
   const saveCurrentWindow = useCallback(
     async (name: string): Promise<void> => {
-      const currentWindowId = snapshot?.currentWindowId ?? null
-      const windowTabs = (snapshot?.tabs ?? []).filter((tab) => tab.windowId === currentWindowId)
-      const { descriptors, skippedCount } = tabsToDescriptors(windowTabs, snapshot?.groups ?? [])
+      if (!snapshot) {
+        // Distinct from "genuinely zero restorable tabs" below -- the tabs
+        // snapshot hasn't loaded yet (a brief window right after mount), so
+        // telling the user there are no tabs would be misleading.
+        const message = 'Tabs are still loading. Try again in a moment.'
+        toast.error(message)
+        throw new Error(message)
+      }
+
+      const windowTabs = snapshot.tabs.filter((tab) => tab.windowId === snapshot.currentWindowId)
+      const { descriptors, skippedCount } = tabsToDescriptors(windowTabs, snapshot.groups)
 
       if (descriptors.length === 0) {
         const message = 'No tabs in this window could be saved.'

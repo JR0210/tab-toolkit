@@ -179,6 +179,37 @@ describe('WorkspacesProvider', () => {
     await waitFor(() => expect(put).toHaveBeenCalledExactlyOnceWith(existing))
   })
 
+  it('gives a distinct "still loading" error instead of a misleading "no tabs" error when the snapshot has not arrived yet', async () => {
+    const user = userEvent.setup()
+    const put = vi.fn().mockResolvedValue(undefined)
+    const repository = createRepository({ put })
+
+    render(
+      <TabsContext
+        value={{
+          snapshot: null,
+          status: 'loading',
+          error: null,
+          refresh: vi.fn().mockResolvedValue(undefined),
+          activateTab: vi.fn().mockResolvedValue(undefined),
+        }}
+      >
+        <SettingsContext value={createSettingsContextValue()}>
+          <WorkspacesProvider repository={repository}>
+            <Harness />
+            <Toaster />
+          </WorkspacesProvider>
+        </SettingsContext>
+      </TabsContext>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Save current window' }))
+
+    expect(await screen.findByText(/still loading/i)).toBeVisible()
+    expect(screen.queryByText('No tabs in this window could be saved.')).not.toBeInTheDocument()
+    expect(put).not.toHaveBeenCalled()
+  })
+
   it('rejects deleting a workspace that is not in memory instead of silently reporting success', async () => {
     const user = userEvent.setup()
     const del = vi.fn().mockResolvedValue(undefined)
