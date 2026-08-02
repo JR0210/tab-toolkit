@@ -1,4 +1,4 @@
-import type { BulkResult, TabSnapshot } from '../domain/browser'
+import type { BulkResult, TabGroupColor, TabSnapshot } from '../domain/browser'
 import { runBulk } from '../features/tabs/bulk-result'
 import { mapChromeTab, mapChromeTabGroup } from './tab-mapper'
 
@@ -7,6 +7,8 @@ export interface ChromeBrowserApi {
     getAll(options: chrome.windows.QueryOptions): Promise<chrome.windows.Window[]>
     getCurrent(): Promise<chrome.windows.Window>
     update(windowId: number, updateInfo: chrome.windows.UpdateInfo): Promise<chrome.windows.Window>
+    get(windowId: number): Promise<chrome.windows.Window>
+    create(createData: chrome.windows.CreateData): Promise<chrome.windows.Window | undefined>
   }
   tabs: {
     update(
@@ -16,9 +18,15 @@ export interface ChromeBrowserApi {
     reload(tabId: number, reloadProperties?: chrome.tabs.ReloadProperties): Promise<void>
     discard(tabId: number): Promise<chrome.tabs.Tab | undefined>
     remove(tabIds: number | number[]): Promise<void>
+    create(createProperties: chrome.tabs.CreateProperties): Promise<chrome.tabs.Tab>
+    group(options: chrome.tabs.GroupOptions): Promise<number>
   }
   tabGroups: {
     query(queryInfo: chrome.tabGroups.QueryInfo): Promise<chrome.tabGroups.TabGroup[]>
+    update(
+      groupId: number,
+      updateProperties: chrome.tabGroups.UpdateProperties,
+    ): Promise<chrome.tabGroups.TabGroup | undefined>
   }
 }
 
@@ -30,6 +38,14 @@ export interface BrowserGateway {
   reloadTabs(ids: readonly number[]): Promise<BulkResult>
   discardTabs(ids: readonly number[]): Promise<BulkResult>
   removeTabs(ids: readonly number[]): Promise<BulkResult>
+  windowExists(windowId: number): Promise<boolean>
+  createWindow(url: string): Promise<{ windowId: number; tabId: number }>
+  createTab(options: { windowId: number; url: string; index: number }): Promise<number>
+  groupCreatedTabs(
+    tabIds: readonly number[],
+    windowId: number,
+    group: { title: string; color: TabGroupColor },
+  ): Promise<void>
 }
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
@@ -90,6 +106,44 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
           await chrome.tabs.remove(id)
         })
       }
+    },
+    async windowExists(windowId) {
+      try {
+        await chrome.windows.get(windowId)
+        return true
+      } catch {
+        return false
+      }
+    },
+    async createWindow(url) {
+      const window = await chrome.windows.create({ url, focused: false })
+      const tab = window?.tabs?.[0]
+
+      if (!window || typeof window.id !== 'number' || !tab || typeof tab.id !== 'number') {
+        throw new Error('Chrome did not create the restored window')
+      }
+
+      return { windowId: window.id, tabId: tab.id }
+    },
+    async createTab({ windowId, url, index }) {
+      const tab = await chrome.tabs.create({ windowId, url, index, active: false })
+
+      if (typeof tab.id !== 'number') {
+        throw new Error('Chrome did not create the restored tab')
+      }
+
+      return tab.id
+    },
+    async groupCreatedTabs(tabIds, windowId, group) {
+      if (tabIds.length === 0) {
+        return
+      }
+
+      const groupId = await chrome.tabs.group({
+        tabIds: [tabIds[0], ...tabIds.slice(1)] as [number, ...number[]],
+        createProperties: { windowId },
+      })
+      await chrome.tabGroups.update(groupId, { title: group.title, color: group.color })
     },
   }
 }

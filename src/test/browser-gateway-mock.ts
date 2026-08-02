@@ -16,6 +16,10 @@ export function createStubBrowserGateway(overrides: Partial<BrowserGateway> = {}
     reloadTabs: vi.fn().mockResolvedValue(createEmptyBulkResult()),
     discardTabs: vi.fn().mockResolvedValue(createEmptyBulkResult()),
     removeTabs: vi.fn().mockResolvedValue(createEmptyBulkResult()),
+    windowExists: vi.fn().mockResolvedValue(true),
+    createWindow: vi.fn().mockResolvedValue({ windowId: 1, tabId: 1 }),
+    createTab: vi.fn().mockResolvedValue(1),
+    groupCreatedTabs: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }

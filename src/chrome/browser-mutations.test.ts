@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createChromeBrowserApiMock } from '../test/chrome-mocks'
+import {
+  createChromeBrowserApiMock,
+  createChromeTab,
+  createChromeWindow,
+} from '../test/chrome-mocks'
 import { createChromeBrowserGateway } from './browser-gateway'
 
 describe('createChromeBrowserGateway tab mutations', () => {
@@ -119,5 +123,75 @@ describe('createChromeBrowserGateway tab mutations', () => {
 
     expect(removeTabs).not.toHaveBeenCalled()
     expect(result).toEqual({ succeeded: [], failed: [] })
+  })
+})
+
+describe('createChromeBrowserGateway window and tab creation', () => {
+  it('reports a window exists when Chrome resolves it', async () => {
+    const { api, getWindow } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.windowExists(4)).resolves.toBe(true)
+    expect(getWindow).toHaveBeenCalledExactlyOnceWith(4)
+  })
+
+  it('reports a window does not exist when Chrome rejects the lookup', async () => {
+    const { api, getWindow } = createChromeBrowserApiMock()
+    getWindow.mockRejectedValue(new Error('No window with id: 4'))
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.windowExists(4)).resolves.toBe(false)
+  })
+
+  it('creates a new window from a URL and returns its window and tab ids', async () => {
+    const { api, createWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(
+      createChromeWindow({ id: 55, tabs: [createChromeTab({ id: 66, windowId: 55 })] }),
+    )
+    const gateway = createChromeBrowserGateway(api)
+
+    const result = await gateway.createWindow('https://example.com')
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ url: 'https://example.com' }),
+    )
+    expect(result).toEqual({ windowId: 55, tabId: 66 })
+  })
+
+  it('rejects when Chrome cannot create the window or its first tab', async () => {
+    const { api, createWindow } = createChromeBrowserApiMock()
+    createWindow.mockResolvedValue(undefined)
+    const gateway = createChromeBrowserGateway(api)
+
+    await expect(gateway.createWindow('https://example.com')).rejects.toThrow()
+  })
+
+  it('creates a tab at a given window and index and returns its id', async () => {
+    const { api, createTab } = createChromeBrowserApiMock()
+    createTab.mockResolvedValue(createChromeTab({ id: 77, windowId: 9 }))
+    const gateway = createChromeBrowserGateway(api)
+
+    const tabId = await gateway.createTab({ windowId: 9, url: 'https://example.com/a', index: 2 })
+
+    expect(createTab).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ windowId: 9, url: 'https://example.com/a', index: 2 }),
+    )
+    expect(tabId).toBe(77)
+  })
+
+  it('groups created tabs and applies the saved title and color', async () => {
+    const { api, groupTabs, updateTabGroup } = createChromeBrowserApiMock()
+    groupTabs.mockResolvedValue(12)
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.groupCreatedTabs([1, 2], 9, { title: 'Research', color: 'yellow' })
+
+    expect(groupTabs).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ tabIds: [1, 2], createProperties: { windowId: 9 } }),
+    )
+    expect(updateTabGroup).toHaveBeenCalledExactlyOnceWith(12, {
+      title: 'Research',
+      color: 'yellow',
+    })
   })
 })
