@@ -23,6 +23,8 @@ export interface ChromeBrowserApi {
     remove(tabIds: number | number[]): Promise<void>
     create(createProperties: chrome.tabs.CreateProperties): Promise<chrome.tabs.Tab>
     group(options: chrome.tabs.GroupOptions): Promise<number>
+    move(tabIds: number[], moveProperties: chrome.tabs.MoveProperties): Promise<chrome.tabs.Tab[]>
+    ungroup(tabIds: number | [number, ...number[]]): Promise<void>
   }
   tabGroups: {
     query(queryInfo: chrome.tabGroups.QueryInfo): Promise<chrome.tabGroups.TabGroup[]>
@@ -49,6 +51,12 @@ export interface BrowserGateway {
     windowId: number,
     group: { title: string; color: TabGroupColor },
   ): Promise<void>
+  createWindowWithTab(tabId: number): Promise<{ windowId: number; tabId: number }>
+  moveTabs(tabIds: readonly number[], windowId: number, index: number): Promise<BulkResult>
+  moveTab(tabId: number, windowId: number, index: number): Promise<void>
+  groupTabs(tabIds: readonly number[], windowId: number, groupId?: number): Promise<number>
+  updateGroup(groupId: number, update: { title: string; color: TabGroupColor }): Promise<void>
+  ungroupTabs(tabIds: readonly number[]): Promise<void>
 }
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
@@ -157,6 +165,66 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
         createProperties: { windowId },
       })
       await chrome.tabGroups.update(groupId, { title: group.title, color: group.color })
+    },
+    async createWindowWithTab(tabId) {
+      const window = await chrome.windows.create({ tabId, type: 'normal', focused: true })
+
+      if (!window || typeof window.id !== 'number') {
+        throw new Error('Chrome did not create the new window')
+      }
+
+      return { windowId: window.id, tabId }
+    },
+    async moveTabs(tabIds, windowId, index) {
+      if (tabIds.length === 0) {
+        return { succeeded: [], failed: [] }
+      }
+
+      try {
+        await chrome.tabs.move([...tabIds], { windowId, index })
+        return { succeeded: [...tabIds], failed: [] }
+      } catch {
+        // Mirrors removeTabs: a single bad id can reject the whole batch, so
+        // retry one at a time to isolate the real failures. For a specific
+        // target index (not -1/"append"), each successful single move must
+        // target the next index along -- moving every tab to the SAME fixed
+        // index would insert each one ahead of the last, reversing order.
+        let nextIndex = index
+
+        return runBulk(tabIds, async (id) => {
+          await chrome.tabs.move([id], { windowId, index: nextIndex })
+
+          if (index !== -1) {
+            nextIndex += 1
+          }
+        })
+      }
+    },
+    async moveTab(tabId, windowId, index) {
+      await chrome.tabs.move([tabId], { windowId, index })
+    },
+    async groupTabs(tabIds, windowId, groupId) {
+      if (tabIds.length === 0) {
+        throw new Error('Cannot group zero tabs')
+      }
+
+      const [first, ...rest] = tabIds
+
+      return chrome.tabs.group({
+        tabIds: [first, ...rest],
+        groupId,
+        createProperties: groupId === undefined ? { windowId } : undefined,
+      })
+    },
+    async updateGroup(groupId, update) {
+      await chrome.tabGroups.update(groupId, { title: update.title, color: update.color })
+    },
+    async ungroupTabs(tabIds) {
+      if (tabIds.length === 0) {
+        return
+      }
+
+      await chrome.tabs.ungroup([tabIds[0], ...tabIds.slice(1)] as [number, ...number[]])
     },
   }
 }

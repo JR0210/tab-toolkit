@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import {
   ArchiveIcon,
+  ArrowDownAZIcon,
   ChevronDownIcon,
+  CopyXIcon,
+  ExternalLinkIcon,
+  FolderPlusIcon,
+  GlobeIcon,
   PinIcon,
   PinOffIcon,
   RefreshCwIcon,
@@ -12,6 +17,13 @@ import {
 import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import type { BulkResult, TabRecord } from '../../domain/browser'
+import { AddToGroupDialog } from '../organise/AddToGroupDialog'
+import { DuplicatesDialog } from '../organise/DuplicatesDialog'
+import { findDuplicateSets } from '../organise/duplicate-plan'
+import { groupByDomain } from '../organise/group-tabs'
+import { moveSelectionToNewWindow } from '../organise/move-to-window'
+import { arrangeSelection } from '../organise/sort-tabs'
+import type { ArrangeSort } from '../organise/sort-tabs'
 import { Button } from '../../shared/ui/button'
 import {
   DropdownMenu,
@@ -45,8 +57,11 @@ export function ManageTabsMenu({
   const { snapshot, refresh } = useTabs()
   const { setManySelected } = useTabInteractions()
   const [pending, setPending] = useState(false)
+  const [addToGroupOpen, setAddToGroupOpen] = useState(false)
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false)
 
   const ids = tabs.map((tab) => tab.id)
+  const hasDuplicates = findDuplicateSets(tabs).length > 0
 
   const runAction = async (
     verb: string,
@@ -113,6 +128,60 @@ export function ManageTabsMenu({
     }
   }
 
+  const handleMoveToNewWindow = async () => {
+    setPending(true)
+
+    try {
+      const result = await moveSelectionToNewWindow(tabs, gateway)
+      showBulkResultToast(result, 'Moved')
+    } catch {
+      toast.error('Could not move the tabs. Try again.')
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
+    }
+  }
+
+  const handleArrange = async (sort: ArrangeSort) => {
+    setPending(true)
+
+    try {
+      const result = await arrangeSelection(tabs, sort, gateway)
+      showBulkResultToast(result, 'Arranged')
+    } catch {
+      toast.error('Could not arrange the tabs. Try again.')
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
+    }
+  }
+
+  const handleSortByTitle = () => handleArrange('title')
+  const handleSortByDomain = () => handleArrange('domain')
+
+  const handleGroupByDomain = async () => {
+    setPending(true)
+
+    try {
+      const result = await groupByDomain(tabs, gateway)
+      showBulkResultToast(result, 'Grouped')
+    } catch {
+      toast.error('Could not group the tabs. Try again.')
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
+    }
+  }
+
   const handleClose = async () => {
     setPending(true)
 
@@ -134,41 +203,78 @@ export function ManageTabsMenu({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" disabled={pending} />}>
-        Manage
-        <ChevronDownIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handlePin} disabled={pending}>
-          <PinIcon />
-          Pin
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleUnpin} disabled={pending}>
-          <PinOffIcon />
-          Unpin
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleMute} disabled={pending}>
-          <VolumeXIcon />
-          Mute
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleUnmute} disabled={pending}>
-          <Volume2Icon />
-          Unmute
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleReload} disabled={pending}>
-          <RefreshCwIcon />
-          Reload
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleDiscard} disabled={pending}>
-          <ArchiveIcon />
-          Discard
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleClose} disabled={pending} variant="destructive">
-          <XIcon />
-          Close
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="outline" size="sm" disabled={pending} />}>
+          Manage
+          <ChevronDownIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handlePin} disabled={pending}>
+            <PinIcon />
+            Pin
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleUnpin} disabled={pending}>
+            <PinOffIcon />
+            Unpin
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleMute} disabled={pending}>
+            <VolumeXIcon />
+            Mute
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleUnmute} disabled={pending}>
+            <Volume2Icon />
+            Unmute
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleReload} disabled={pending}>
+            <RefreshCwIcon />
+            Reload
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDiscard} disabled={pending}>
+            <ArchiveIcon />
+            Discard
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleMoveToNewWindow} disabled={pending}>
+            <ExternalLinkIcon />
+            Move to new window
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSortByTitle} disabled={pending}>
+            <ArrowDownAZIcon />
+            Sort by title
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSortByDomain} disabled={pending}>
+            <GlobeIcon />
+            Sort by domain
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleGroupByDomain} disabled={pending}>
+            <FolderPlusIcon />
+            Group by domain
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setAddToGroupOpen(true)} disabled={pending}>
+            <FolderPlusIcon />
+            Add to group...
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setDuplicatesOpen(true)}
+            disabled={pending || !hasDuplicates}
+          >
+            <CopyXIcon />
+            Find duplicates...
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleClose} disabled={pending} variant="destructive">
+            <XIcon />
+            Close
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AddToGroupDialog open={addToGroupOpen} onOpenChange={setAddToGroupOpen} tabs={tabs} />
+      <DuplicatesDialog
+        open={duplicatesOpen}
+        onOpenChange={setDuplicatesOpen}
+        tabs={tabs}
+        repository={repository}
+      />
+    </>
   )
 }
