@@ -2,6 +2,7 @@ import { AppShell } from './app/AppShell'
 import { BrowserProvider } from './chrome/browser-context'
 import type { BrowserGateway } from './chrome/browser-gateway'
 import { TabsProvider } from './features/tabs/tabs-provider'
+import { WorkspacesProvider } from './features/workspaces/workspaces-provider'
 import { SettingsProvider } from './shared/settings/settings-provider'
 import type { SettingsRepository } from './shared/settings/settings-repository'
 import { Toaster } from './shared/ui/toaster'
@@ -17,9 +18,11 @@ function App({ repository, gateway }: AppProps) {
     <SettingsProvider repository={repository}>
       <BrowserProvider gateway={gateway}>
         <TabsProvider>
-          <TooltipProvider>
-            <AppShell />
-          </TooltipProvider>
+          <WorkspacesProvider>
+            <TooltipProvider>
+              <AppShell />
+            </TooltipProvider>
+          </WorkspacesProvider>
         </TabsProvider>
       </BrowserProvider>
       <Toaster />
