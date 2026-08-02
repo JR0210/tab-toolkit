@@ -7,6 +7,7 @@ import { mapChromeTab, mapChromeTabGroup } from './tab-mapper'
 export interface ChromeBrowserApi {
   runtime: {
     getPlatformInfo(): Promise<chrome.runtime.PlatformInfo>
+    getManifest(): chrome.runtime.Manifest
   }
   windows: {
     getAll(options: chrome.windows.QueryOptions): Promise<chrome.windows.Window[]>
@@ -42,6 +43,10 @@ export interface ChromeBrowserApi {
 
 export interface BrowserGateway {
   getPlatformInfo(): Promise<PlatformFamily>
+  /** The extension's manifest version, e.g. for an About section. */
+  getManifestVersion(): string
+  /** Opens `url` as a new tab, e.g. for a "Help & documentation" link. */
+  openUrl(url: string): Promise<void>
   getSnapshot(): Promise<TabSnapshot>
   activateTab(tabId: number, windowId: number): Promise<void>
   setPinned(ids: readonly number[], pinned: boolean): Promise<BulkResult>
@@ -77,6 +82,12 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
         // (Ctrl/Delete) labels, not accidentally show Command.
         return 'non-mac'
       }
+    },
+    getManifestVersion() {
+      return chrome.runtime.getManifest().version
+    },
+    async openUrl(url) {
+      await chrome.tabs.create({ url })
     },
     async getSnapshot() {
       const [windows, currentWindow, groups] = await Promise.all([

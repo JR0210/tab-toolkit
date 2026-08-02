@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { MoonIcon, MoreHorizontalIcon, SettingsIcon, SunIcon } from 'lucide-react'
 import { useTabs } from '../features/tabs/use-tabs'
+import { SettingsDialog } from '../features/settings/SettingsDialog'
 import { useSettings } from '../shared/settings/use-settings'
 import { Button } from '../shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../shared/ui/tooltip'
@@ -14,68 +16,82 @@ interface HeaderProps {
 export function Header({ view, onViewChange }: HeaderProps) {
   const { resolvedTheme, persistenceError, updateSettings } = useSettings()
   const { snapshot } = useTabs()
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const isDark = resolvedTheme === 'dark'
   const tabCount = snapshot?.tabs.length ?? 0
   const windowCount = new Set(snapshot?.tabs.map((tab) => tab.windowId) ?? []).size
 
   return (
-    <header className="flex flex-col border-b border-border bg-card">
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        <ExtensionMark />
-        <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm font-semibold text-foreground">Tab Toolkit</span>
-          <span className="truncate font-mono text-[11px] text-muted-foreground">
-            {tabCount} {tabCount === 1 ? 'tab' : 'tabs'} · {windowCount}{' '}
-            {windowCount === 1 ? 'window' : 'windows'}
-          </span>
-        </div>
-
-        <div className="ml-auto flex items-center gap-0.5">
-          {persistenceError && (
-            <span role="alert" className="mr-1 text-xs font-medium text-destructive">
-              {persistenceError}
+    <>
+      <header className="flex flex-col border-b border-border bg-card">
+        <div className="flex items-center gap-3 px-3 py-2.5">
+          <ExtensionMark />
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-semibold text-foreground">Tab Toolkit</span>
+            <span className="truncate font-mono text-[11px] text-muted-foreground">
+              {tabCount} {tabCount === 1 ? 'tab' : 'tabs'} · {windowCount}{' '}
+              {windowCount === 1 ? 'window' : 'windows'}
             </span>
-          )}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
-                  onClick={() => {
-                    void updateSettings({ theme: isDark ? 'light' : 'dark' }).catch(() => undefined)
-                  }}
-                />
-              }
-            >
-              {isDark ? <MoonIcon /> : <SunIcon />}
-            </TooltipTrigger>
-            <TooltipContent>{isDark ? 'Light theme' : 'Dark theme'}</TooltipContent>
-          </Tooltip>
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button variant="ghost" size="icon-sm" aria-label="Settings" />}
-            >
-              <SettingsIcon />
-            </TooltipTrigger>
-            <TooltipContent>Settings</TooltipContent>
-          </Tooltip>
+          <div className="ml-auto flex items-center gap-0.5">
+            {persistenceError && (
+              <span role="alert" className="mr-1 text-xs font-medium text-destructive">
+                {persistenceError}
+              </span>
+            )}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+                    onClick={() => {
+                      void updateSettings({ theme: isDark ? 'light' : 'dark' }).catch(
+                        () => undefined,
+                      )
+                    }}
+                  />
+                }
+              >
+                {isDark ? <MoonIcon /> : <SunIcon />}
+              </TooltipTrigger>
+              <TooltipContent>{isDark ? 'Light theme' : 'Dark theme'}</TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button variant="ghost" size="icon-sm" aria-label="More options" />}
-            >
-              <MoreHorizontalIcon />
-            </TooltipTrigger>
-            <TooltipContent>More options</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Settings"
+                    onClick={() => setSettingsOpen(true)}
+                  />
+                }
+              >
+                <SettingsIcon />
+              </TooltipTrigger>
+              <TooltipContent>Settings</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger
+                render={<Button variant="ghost" size="icon-sm" aria-label="More options" />}
+              >
+                <MoreHorizontalIcon />
+              </TooltipTrigger>
+              <TooltipContent>More options</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
-      </div>
 
-      <PrimaryNav view={view} onViewChange={onViewChange} />
-    </header>
+        <PrimaryNav view={view} onViewChange={onViewChange} />
+      </header>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </>
   )
 }
 

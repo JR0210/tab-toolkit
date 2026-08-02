@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { ComponentProps } from 'react'
 import { ArrowDownUpIcon, SearchIcon, XIcon } from 'lucide-react'
-import { useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
+import { useRegisterAction, useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
 import { cn } from '../../shared/lib/cn'
 import { Button } from '../../shared/ui/button'
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '../../shared/ui/dropdown-menu'
 import { FilterPopover } from './FilterPopover'
+import { EMPTY_FILTERS } from './tab-query'
 import type { SortKey } from './tab-query'
 import { useTabInteractions } from './use-tab-interactions'
 
@@ -28,6 +29,7 @@ export function TabsToolbar() {
     setScope,
     setSearch,
     setSort,
+    setFilters,
     selectedIds,
     setManySelected,
     visibleIds,
@@ -66,6 +68,16 @@ export function TabsToolbar() {
         setSearch('')
       }
     }, [selectedIds, clearSelection, query.search, setSearch]),
+  )
+
+  // Reused by SettingsDialog's Reset action -- it's rendered from Header,
+  // outside TabInteractionProvider, so it can't call setFilters directly and
+  // instead invokes this registered action by id.
+  useRegisterAction(
+    'reset-filters',
+    useCallback(() => {
+      setFilters({ ...EMPTY_FILTERS })
+    }, [setFilters]),
   )
 
   return (

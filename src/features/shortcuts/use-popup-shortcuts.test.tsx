@@ -7,7 +7,12 @@ import { Dialog, DialogContent, DialogTitle } from '../../shared/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from '../../shared/ui/dropdown-menu'
 import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 import type { ShortcutCommand } from './shortcut-definitions'
-import { ShortcutHandlersProvider, useRegisterShortcut } from './use-popup-shortcuts'
+import {
+  ShortcutHandlersProvider,
+  useInvokeAction,
+  useRegisterAction,
+  useRegisterShortcut,
+} from './use-popup-shortcuts'
 
 function Registrar({
   command,
@@ -196,5 +201,50 @@ describe('Escape priority', () => {
     dispatchKeydown({ key: 'Escape', ctrlKey: true })
 
     expect(handler).not.toHaveBeenCalled()
+  })
+})
+
+describe('useRegisterAction / useInvokeAction', () => {
+  // The Settings dialog's Reset button needs to reach into TabsView's live
+  // filter state and AppShell's view state from outside their subtree --
+  // the same cross-tree problem keyboard shortcuts solve, so it reuses this
+  // exact registry via a plain string id instead of a ShortcutCommand.
+  function ActionRegistrar({ id, handler }: { id: string; handler: (() => void) | null }) {
+    useRegisterAction(id, handler)
+    return null
+  }
+
+  it('invokes a registered non-keyboard action by id', () => {
+    const handler = vi.fn()
+    let invoke: ((id: string) => void) | null = null
+
+    function Invoker() {
+      invoke = useInvokeAction()
+      return null
+    }
+
+    renderWithProvider(
+      <>
+        <ActionRegistrar id="reset-filters" handler={handler} />
+        <Invoker />
+      </>,
+    )
+
+    invoke!('reset-filters')
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('does nothing when invoking an unregistered action id', () => {
+    let invoke: ((id: string) => void) | null = null
+
+    function Invoker() {
+      invoke = useInvokeAction()
+      return null
+    }
+
+    renderWithProvider(<Invoker />)
+
+    expect(() => invoke!('nothing-registered-here')).not.toThrow()
   })
 })

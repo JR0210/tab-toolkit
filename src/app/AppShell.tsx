@@ -7,7 +7,7 @@ import { showBulkResultToast } from '../features/tabs/lifecycle-toast'
 import { TabsView } from '../features/tabs/TabsView'
 import { undoClose } from '../features/tabs/tab-lifecycle-service'
 import { useTabs } from '../features/tabs/use-tabs'
-import { useRegisterShortcut } from '../features/shortcuts/use-popup-shortcuts'
+import { useRegisterAction, useRegisterShortcut } from '../features/shortcuts/use-popup-shortcuts'
 import { WorkspacesView } from '../features/workspaces/WorkspacesView'
 import { Header } from './Header'
 import type { PrimaryView } from './PrimaryNav'
@@ -40,6 +40,14 @@ export function AppShell({ closeRepository = createChromeCloseRepository() }: Ap
         toast.error('Could not restore the tabs. Try again.')
       }
     }, [gateway, closeRepository, refresh]),
+  )
+
+  // Reused by SettingsDialog's Reset action -- see the matching
+  // 'reset-filters' registration in TabsToolbar.tsx for why this indirection
+  // exists instead of a direct call.
+  useRegisterAction(
+    'reset-view',
+    useCallback(() => setView('tabs'), []),
   )
 
   return (

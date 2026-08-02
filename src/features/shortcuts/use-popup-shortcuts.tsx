@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import { getPlatformFamily } from '../../platform/platform'
@@ -8,26 +8,26 @@ import type { ShortcutCommand } from './shortcut-definitions'
 
 export type ShortcutHandler = () => void
 
+// Keyed by plain string, not just ShortcutCommand: keyboard shortcuts are
+// the primary user of this registry, but it also carries non-keyboard
+// "reach into another subtree" actions (e.g. Settings' Reset clearing
+// TabsView's filters and switching AppShell's view) -- see
+// useRegisterAction/useInvokeAction below, which are the same mechanism
+// under a different, non-keyboard-shaped id namespace.
 interface ShortcutHandlersValue {
-  handlers: Map<ShortcutCommand, ShortcutHandler>
+  handlers: Map<string, ShortcutHandler>
 }
 
 const ShortcutHandlersContext = createContext<ShortcutHandlersValue | null>(null)
 
 /**
- * Registers `handler` as the live implementation of `command` for as long as
- * the calling component is mounted and `handler` is non-null. Components
- * that own a shortcut's real behaviour (e.g. TabsToolbar for focus-search,
- * SelectionDock for copy/export/close-selected) call this instead of the
- * popup-level listener knowing about their internals. Passing null (e.g.
- * SelectionDock with nothing selected) unregisters the command so the
- * listener treats it as a no-op -- satisfying "commands requiring selection
- * do nothing when selection is empty" without any special-casing there.
+ * Registers `handler` as the live implementation of `id` for as long as the
+ * calling component is mounted and `handler` is non-null. Passing null
+ * unregisters it so lookups treat it as a no-op. This is the low-level
+ * primitive; useRegisterShortcut is a ShortcutCommand-typed convenience
+ * wrapper over it for the keyboard-routing case.
  */
-export function useRegisterShortcut(
-  command: ShortcutCommand,
-  handler: ShortcutHandler | null,
-): void {
+export function useRegisterAction(id: string, handler: ShortcutHandler | null): void {
   const context = useContext(ShortcutHandlersContext)
 
   useEffect(() => {
@@ -35,14 +35,48 @@ export function useRegisterShortcut(
       return
     }
 
-    context.handlers.set(command, handler)
+    context.handlers.set(id, handler)
 
     return () => {
-      if (context.handlers.get(command) === handler) {
-        context.handlers.delete(command)
+      if (context.handlers.get(id) === handler) {
+        context.handlers.delete(id)
       }
     }
-  }, [context, command, handler])
+  }, [context, id, handler])
+}
+
+/**
+ * Components that own a shortcut's real behaviour (e.g. TabsToolbar for
+ * focus-search, SelectionDock for copy/export/close-selected) call this
+ * instead of the popup-level listener knowing about their internals.
+ * Passing null (e.g. SelectionDock with nothing selected) unregisters the
+ * command so the listener treats it as a no-op -- satisfying "commands
+ * requiring selection do nothing when selection is empty" without any
+ * special-casing there.
+ */
+export function useRegisterShortcut(
+  command: ShortcutCommand,
+  handler: ShortcutHandler | null,
+): void {
+  useRegisterAction(command, handler)
+}
+
+/**
+ * Looks up and calls whatever is currently registered for `id`, or does
+ * nothing if there's no registered handler. Used to trigger a registered
+ * action from outside the keyboard-routing path -- e.g. Settings' Reset
+ * button invoking the same "clear filters" / "switch to Tabs view" handlers
+ * that live deeper in the tree, without prop-drilling.
+ */
+export function useInvokeAction(): (id: string) => void {
+  const context = useContext(ShortcutHandlersContext)
+
+  return useCallback(
+    (id: string) => {
+      context?.handlers.get(id)?.()
+    },
+    [context],
+  )
 }
 
 /**
@@ -88,9 +122,7 @@ function isOverlayOpen(): boolean {
   )
 }
 
-function usePopupShortcutsListener(handlersRef: {
-  current: Map<ShortcutCommand, ShortcutHandler>
-}): void {
+function usePopupShortcutsListener(handlersRef: { current: Map<string, ShortcutHandler> }): void {
   const platform = usePlatformFamily()
   const platformRef = useRef(platform)
   platformRef.current = platform
@@ -139,7 +171,7 @@ function usePopupShortcutsListener(handlersRef: {
  * below it can register its own commands without prop-drilling.
  */
 export function ShortcutHandlersProvider({ children }: PropsWithChildren) {
-  const handlersRef = useRef<Map<ShortcutCommand, ShortcutHandler>>(new Map())
+  const handlersRef = useRef<Map<string, ShortcutHandler>>(new Map())
   usePopupShortcutsListener(handlersRef)
 
   const value = useMemo<ShortcutHandlersValue>(() => ({ handlers: handlersRef.current }), [])
