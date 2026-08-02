@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../shared/ui/dropdown-menu'
-import { useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
+import { useRegisterShortcut } from '../shortcuts/use-shortcut-actions'
 import { createChromeCloseRepository } from '../tabs/close-repository'
 import type { CloseRepository } from '../tabs/close-repository'
 import { ManageTabsMenu } from '../tabs/ManageTabsMenu'

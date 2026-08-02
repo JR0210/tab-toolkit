@@ -7,12 +7,8 @@ import { Dialog, DialogContent, DialogTitle } from '../../shared/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from '../../shared/ui/dropdown-menu'
 import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 import type { ShortcutCommand } from './shortcut-definitions'
-import {
-  ShortcutHandlersProvider,
-  useInvokeAction,
-  useRegisterAction,
-  useRegisterShortcut,
-} from './use-popup-shortcuts'
+import { ShortcutHandlersProvider } from './use-popup-shortcuts'
+import { useInvokeAction, useRegisterAction, useRegisterShortcut } from './use-shortcut-actions'
 
 function Registrar({
   command,

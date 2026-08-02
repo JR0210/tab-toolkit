@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '../../shared/ui/dialog'
 import { Separator } from '../../shared/ui/separator'
-import { useInvokeAction } from '../shortcuts/use-popup-shortcuts'
+import { useInvokeAction } from '../shortcuts/use-shortcut-actions'
 import { ShortcutsDialog } from './ShortcutsDialog'
 
 const TAB_TOOLKIT_REPOSITORY_URL = 'https://github.com/JR0210/tab-toolkit'

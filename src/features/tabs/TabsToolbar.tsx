@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { ComponentProps } from 'react'
 import { ArrowDownUpIcon, SearchIcon, XIcon } from 'lucide-react'
-import { useRegisterAction, useRegisterShortcut } from '../shortcuts/use-popup-shortcuts'
+import { useRegisterAction, useRegisterShortcut } from '../shortcuts/use-shortcut-actions'
 import { cn } from '../../shared/lib/cn'
 import { Button } from '../../shared/ui/button'
 import {

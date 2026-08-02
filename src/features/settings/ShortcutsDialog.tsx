@@ -1,6 +1,6 @@
 import { keysForPlatform } from '../shortcuts/match-shortcut'
 import { SHORTCUTS } from '../shortcuts/shortcut-definitions'
-import { usePlatformFamily } from '../shortcuts/use-popup-shortcuts'
+import { usePlatformFamily } from '../shortcuts/use-shortcut-actions'
 import {
   Dialog,
   DialogContent,
