@@ -23,6 +23,7 @@ export interface ChromeBrowserApi {
     remove(tabIds: number | number[]): Promise<void>
     create(createProperties: chrome.tabs.CreateProperties): Promise<chrome.tabs.Tab>
     group(options: chrome.tabs.GroupOptions): Promise<number>
+    move(tabIds: number[], moveProperties: chrome.tabs.MoveProperties): Promise<chrome.tabs.Tab[]>
   }
   tabGroups: {
     query(queryInfo: chrome.tabGroups.QueryInfo): Promise<chrome.tabGroups.TabGroup[]>
@@ -49,6 +50,8 @@ export interface BrowserGateway {
     windowId: number,
     group: { title: string; color: TabGroupColor },
   ): Promise<void>
+  createWindowWithTab(tabId: number): Promise<{ windowId: number; tabId: number }>
+  moveTabs(tabIds: readonly number[], windowId: number, index: number): Promise<BulkResult>
 }
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
@@ -157,6 +160,31 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
         createProperties: { windowId },
       })
       await chrome.tabGroups.update(groupId, { title: group.title, color: group.color })
+    },
+    async createWindowWithTab(tabId) {
+      const window = await chrome.windows.create({ tabId, type: 'normal', focused: true })
+
+      if (!window || typeof window.id !== 'number') {
+        throw new Error('Chrome did not create the new window')
+      }
+
+      return { windowId: window.id, tabId }
+    },
+    async moveTabs(tabIds, windowId, index) {
+      if (tabIds.length === 0) {
+        return { succeeded: [], failed: [] }
+      }
+
+      try {
+        await chrome.tabs.move([...tabIds], { windowId, index })
+        return { succeeded: [...tabIds], failed: [] }
+      } catch {
+        // Mirrors removeTabs: a single bad id can reject the whole batch, so
+        // retry one at a time to isolate the real failures.
+        return runBulk(tabIds, async (id) => {
+          await chrome.tabs.move([id], { windowId, index })
+        })
+      }
     },
   }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ArchiveIcon,
   ChevronDownIcon,
+  ExternalLinkIcon,
   PinIcon,
   PinOffIcon,
   RefreshCwIcon,
@@ -12,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import type { BulkResult, TabRecord } from '../../domain/browser'
+import { moveSelectionToNewWindow } from '../organise/move-to-window'
 import { Button } from '../../shared/ui/button'
 import {
   DropdownMenu,
@@ -113,6 +115,23 @@ export function ManageTabsMenu({
     }
   }
 
+  const handleMoveToNewWindow = async () => {
+    setPending(true)
+
+    try {
+      const result = await moveSelectionToNewWindow(tabs, gateway)
+      showBulkResultToast(result, 'Moved')
+    } catch {
+      toast.error('Could not move the tabs. Try again.')
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
+    }
+  }
+
   const handleClose = async () => {
     setPending(true)
 
@@ -163,6 +182,10 @@ export function ManageTabsMenu({
         <DropdownMenuItem onClick={handleDiscard} disabled={pending}>
           <ArchiveIcon />
           Discard
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleMoveToNewWindow} disabled={pending}>
+          <ExternalLinkIcon />
+          Move to new window
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleClose} disabled={pending} variant="destructive">
           <XIcon />
