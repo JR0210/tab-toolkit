@@ -6,6 +6,7 @@ import type { BrowserGateway } from '../../chrome/browser-gateway'
 import type { TabGroupRecord, TabRecord, TabSnapshot } from '../../domain/browser'
 import { createSettingsRepository } from '../../shared/settings/settings-repository'
 import type { SettingsStorageArea } from '../../shared/settings/settings-repository'
+import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
 
 afterEach(() => {
   document.documentElement.classList.remove('dark')
@@ -197,7 +198,7 @@ function createGateway({
 }): BrowserGateway {
   let snapshotIndex = 0
 
-  return {
+  return createStubBrowserGateway({
     getSnapshot() {
       const snapshot = snapshots[snapshotIndex]
       snapshotIndex += 1
@@ -213,7 +214,7 @@ function createGateway({
       return Promise.resolve(snapshot)
     },
     activateTab,
-  }
+  })
 }
 
 function createInventorySnapshot(): TabSnapshot {

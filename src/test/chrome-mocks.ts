@@ -55,7 +55,23 @@ export function createChromeBrowserApiMock() {
     .fn<ChromeBrowserApi['windows']['update']>()
     .mockResolvedValue(createChromeWindow())
   const updateTab = vi.fn<ChromeBrowserApi['tabs']['update']>().mockResolvedValue(createChromeTab())
+  const reloadTab = vi.fn<ChromeBrowserApi['tabs']['reload']>().mockResolvedValue(undefined)
+  const discardTab = vi
+    .fn<ChromeBrowserApi['tabs']['discard']>()
+    .mockResolvedValue(createChromeTab())
+  const removeTabs = vi.fn<ChromeBrowserApi['tabs']['remove']>().mockResolvedValue(undefined)
+  const createTab = vi.fn<ChromeBrowserApi['tabs']['create']>().mockResolvedValue(createChromeTab())
+  const groupTabs = vi.fn<ChromeBrowserApi['tabs']['group']>().mockResolvedValue(1)
+  const getWindow = vi
+    .fn<ChromeBrowserApi['windows']['get']>()
+    .mockResolvedValue(createChromeWindow())
+  const createWindow = vi
+    .fn<ChromeBrowserApi['windows']['create']>()
+    .mockResolvedValue(createChromeWindow({ tabs: [createChromeTab()] }))
   const queryTabGroups = vi.fn<ChromeBrowserApi['tabGroups']['query']>().mockResolvedValue([])
+  const updateTabGroup = vi
+    .fn<ChromeBrowserApi['tabGroups']['update']>()
+    .mockResolvedValue(createChromeTabGroup())
 
   return {
     api: {
@@ -63,18 +79,34 @@ export function createChromeBrowserApiMock() {
         getAll,
         getCurrent,
         update: updateWindow,
+        get: getWindow,
+        create: createWindow,
       },
       tabs: {
         update: updateTab,
+        reload: reloadTab,
+        discard: discardTab,
+        remove: removeTabs,
+        create: createTab,
+        group: groupTabs,
       },
       tabGroups: {
         query: queryTabGroups,
+        update: updateTabGroup,
       },
     },
     getAll,
     getCurrent,
     updateWindow,
     updateTab,
+    reloadTab,
+    discardTab,
+    removeTabs,
+    createTab,
+    groupTabs,
+    getWindow,
+    createWindow,
     queryTabGroups,
+    updateTabGroup,
   }
 }

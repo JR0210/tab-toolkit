@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../shared/ui/dropdown-menu'
+import { ManageTabsMenu } from '../tabs/ManageTabsMenu'
 import { useTabInteractions } from '../tabs/use-tab-interactions'
 import { useTabs } from '../tabs/use-tabs'
 import { COPY_FORMAT_LABELS, COPY_FORMATS, copyTabsToClipboard } from './copy-actions'
@@ -108,7 +109,7 @@ export function SelectionDock({
           Export
         </Button>
 
-        {/* Manage/Close land here in Loop 05+. */}
+        <ManageTabsMenu tabs={selectedTabs} />
 
         <Button variant="ghost" size="sm" onClick={clearSelection}>
           <XIcon />
