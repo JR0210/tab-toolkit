@@ -40,6 +40,10 @@ export function WorkspacesView() {
   }
 
   const handleSave = async () => {
+    if (saving) {
+      return
+    }
+
     const trimmed = draftName.trim()
 
     if (!trimmed) {

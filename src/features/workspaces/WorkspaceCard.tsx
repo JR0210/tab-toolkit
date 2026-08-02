@@ -40,6 +40,10 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
   }
 
   const submitRename = async () => {
+    if (pending) {
+      return
+    }
+
     const trimmed = draftName.trim()
 
     if (!trimmed) {
@@ -50,6 +54,9 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
     try {
       await onRename(workspace.id, trimmed)
       setRenameOpen(false)
+    } catch {
+      // The provider already surfaced a toast describing what went wrong;
+      // keep the dialog open (skipped above) so the user can retry.
     } finally {
       setPending(false)
     }
@@ -60,6 +67,9 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
     try {
       await onDelete(workspace.id)
       setDeleteOpen(false)
+    } catch {
+      // The provider already surfaced a toast describing what went wrong;
+      // keep the dialog open (skipped above) so the user can retry.
     } finally {
       setPending(false)
     }

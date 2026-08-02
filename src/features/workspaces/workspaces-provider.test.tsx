@@ -66,7 +66,7 @@ describe('WorkspacesProvider', () => {
     await user.click(screen.getByRole('button', { name: 'Save current window' }))
 
     expect(
-      await screen.findByText('Saved 2 tabs; 1 tabs could not be restored and were omitted.'),
+      await screen.findByText('Saved 2 tabs; 1 tab could not be restored and was omitted.'),
     ).toBeVisible()
   })
 
@@ -178,6 +178,33 @@ describe('WorkspacesProvider', () => {
 
     await waitFor(() => expect(put).toHaveBeenCalledExactlyOnceWith(existing))
   })
+
+  it('rejects deleting a workspace that is not in memory instead of silently reporting success', async () => {
+    const user = userEvent.setup()
+    const del = vi.fn().mockResolvedValue(undefined)
+    const repository = createRepository({ delete: del })
+
+    renderProvider({ repository, snapshot: createSnapshot() })
+    await screen.findByTestId('status')
+
+    await user.click(screen.getByRole('button', { name: 'Delete nonexistent' }))
+
+    expect(await screen.findByText(/no longer exists/i)).toBeInTheDocument()
+    expect(del).not.toHaveBeenCalled()
+  })
+
+  it('rejects undoDelete when there is nothing to undo instead of reporting a false restore', async () => {
+    const put = vi.fn().mockResolvedValue(undefined)
+    const repository = createRepository({ put })
+
+    renderProvider({ repository, snapshot: createSnapshot() })
+    const user = userEvent.setup()
+    await screen.findByTestId('status')
+
+    await user.click(screen.getByRole('button', { name: 'Undo delete' }))
+
+    expect(put).not.toHaveBeenCalled()
+  })
 })
 
 function renderProvider({
@@ -232,10 +259,16 @@ function Harness() {
       >
         Rename
       </button>
-      <button type="button" onClick={() => void deleteWorkspace('ws-1')}>
+      <button type="button" onClick={() => void deleteWorkspace('ws-1').catch(() => undefined)}>
         Delete
       </button>
-      <button type="button" onClick={() => void undoDelete()}>
+      <button
+        type="button"
+        onClick={() => void deleteWorkspace('does-not-exist').catch(() => undefined)}
+      >
+        Delete nonexistent
+      </button>
+      <button type="button" onClick={() => void undoDelete().catch(() => undefined)}>
         Undo delete
       </button>
     </div>

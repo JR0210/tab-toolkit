@@ -134,6 +134,54 @@ describe('WorkspaceCard', () => {
     expect(onDelete).toHaveBeenCalledExactlyOnceWith(workspace.id)
   })
 
+  it('keeps the rename dialog open and does not throw when onRename rejects', async () => {
+    const user = userEvent.setup()
+    const onRename = vi.fn().mockRejectedValue(new Error('storage unavailable'))
+    const workspace = createWorkspace({ name: 'Research' })
+
+    render(<WorkspaceCard workspace={workspace} onRename={onRename} onDelete={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Rename Research' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    expect(onRename).toHaveBeenCalledOnce()
+    expect(screen.getByRole('dialog')).toBeVisible()
+  })
+
+  it('does not resubmit a rename while the previous one is still pending', async () => {
+    const user = userEvent.setup()
+    const pending = createDeferred<void>()
+    const onRename = vi.fn().mockReturnValue(pending.promise)
+    const workspace = createWorkspace({ name: 'Research' })
+
+    render(<WorkspaceCard workspace={workspace} onRename={onRename} onDelete={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Rename Research' }))
+    const dialog = await screen.findByRole('dialog')
+    const nameInput = within(dialog).getByLabelText('Name')
+    await user.type(nameInput, '{Enter}')
+    await user.type(nameInput, '{Enter}')
+
+    expect(onRename).toHaveBeenCalledOnce()
+    pending.resolve()
+  })
+
+  it('keeps the delete dialog open and does not throw when onDelete rejects', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn().mockRejectedValue(new Error('storage unavailable'))
+    const workspace = createWorkspace({ name: 'Research' })
+
+    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={onDelete} />)
+
+    await user.click(screen.getByRole('button', { name: 'Delete Research' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    expect(onDelete).toHaveBeenCalledOnce()
+    expect(screen.getByRole('dialog')).toBeVisible()
+  })
+
   it('renders the Open workspace control as disabled with explanatory text', () => {
     const workspace = createWorkspace({})
 
@@ -157,4 +205,15 @@ function createWorkspace(overrides: Partial<Workspace>): Workspace {
     tabs: [createDescriptor('https://example.com')],
     ...overrides,
   }
+}
+
+function createDeferred<Value>() {
+  let resolve: (value: Value) => void = () => {
+    throw new Error('Deferred promise is not initialized')
+  }
+  const promise = new Promise<Value>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
 }

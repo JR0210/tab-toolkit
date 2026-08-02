@@ -84,10 +84,10 @@ export function WorkspacesProvider({
 
       if (skippedCount > 0) {
         toast.success(
-          `Saved ${descriptors.length} tabs; ${skippedCount} tabs could not be restored and were omitted.`,
+          `Saved ${descriptors.length} ${pluralizeTab(descriptors.length)}; ${skippedCount} ${pluralizeTab(skippedCount)} could not be restored and ${skippedCount === 1 ? 'was' : 'were'} omitted.`,
         )
       } else {
-        toast.success(descriptors.length === 1 ? 'Saved 1 tab' : `Saved ${descriptors.length} tabs`)
+        toast.success(`Saved ${descriptors.length} ${pluralizeTab(descriptors.length)}`)
       }
     },
     [snapshot, repository, refresh],
@@ -125,7 +125,8 @@ export function WorkspacesProvider({
       const target = workspaces.find((workspace) => workspace.id === id)
 
       if (!target) {
-        return
+        toast.error('That workspace no longer exists.')
+        throw new Error('Workspace not found')
       }
 
       // Write-before-report: storage must confirm the delete before the
@@ -141,7 +142,7 @@ export function WorkspacesProvider({
     const record = lastDeleted.current
 
     if (!record) {
-      return
+      throw new Error('Nothing to undo')
     }
 
     await repository.put(record)
@@ -164,4 +165,8 @@ export function WorkspacesProvider({
       {children}
     </WorkspacesContext>
   )
+}
+
+function pluralizeTab(count: number): string {
+  return count === 1 ? 'tab' : 'tabs'
 }
