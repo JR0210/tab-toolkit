@@ -1,6 +1,12 @@
 import type { BrowserGateway } from '../../chrome/browser-gateway'
-import type { BulkResult, OperationFailure, TabGroupColor } from '../../domain/browser'
+import type { BulkResult, OperationFailure } from '../../domain/browser'
 import type { CloseSnapshot } from './close-repository'
+import {
+  applyPinnedAndGroups,
+  createDescriptorsInWindow,
+  type CreatedTab,
+  type QueuedDescriptor,
+} from '../restore/restore-window'
 
 type DescriptorEntry = CloseSnapshot['tabs'][number]
 
@@ -9,25 +15,28 @@ interface QueuedEntry {
   descriptor: DescriptorEntry
 }
 
-interface RestoredTab {
-  originalIndex: number
-  descriptor: DescriptorEntry
-  tabId: number
-  windowId: number
-}
-
 /**
  * Recreates the tabs from a CloseSnapshot. `failed` entries are identified by
  * their original index within `snapshot.tabs` — there is no other stable id
  * for a descriptor that was never (re)created. `succeeded` entries are the
  * real ids of the newly created tabs.
+ *
+ * Groups descriptors by their ORIGINAL windowId and, for each group, either
+ * recreates the remaining tabs directly into that window (if it still
+ * exists) or creates ONE new window from the first descriptor and recreates
+ * the rest into it (if it doesn't) -- this "restore into the original
+ * window when possible" fallback is specific to undoing a close and isn't
+ * shared with `restoreIntoNewWindow` (used by import/workspace-open, which
+ * always creates a fresh window). The lower-level "create descriptors into a
+ * given window" and "apply pinned + group metadata" steps ARE shared, via
+ * `createDescriptorsInWindow`/`applyPinnedAndGroups`.
  */
 export async function restoreDescriptors(
   snapshot: CloseSnapshot,
   gateway: BrowserGateway,
 ): Promise<BulkResult> {
   const failed: OperationFailure[] = []
-  const restored: RestoredTab[] = []
+  const restored: CreatedTab[] = []
 
   const entriesByWindow = new Map<number, QueuedEntry[]>()
 
@@ -61,7 +70,7 @@ export async function restoreDescriptors(
         const created = await gateway.createWindow(first.descriptor.url)
         targetWindowId = created.windowId
         restored.push({
-          originalIndex: first.originalIndex,
+          descriptorIndex: first.originalIndex,
           descriptor: first.descriptor,
           tabId: created.tabId,
           windowId: targetWindowId,
@@ -75,77 +84,27 @@ export async function restoreDescriptors(
       }
     }
 
-    for (const entry of remaining) {
-      try {
-        const tabId = await gateway.createTab({
-          windowId: targetWindowId,
-          url: entry.descriptor.url,
-          index: entry.descriptor.index,
-        })
-        restored.push({
-          originalIndex: entry.originalIndex,
-          descriptor: entry.descriptor,
-          tabId,
-          windowId: targetWindowId,
-        })
-      } catch (error) {
-        failed.push({ id: entry.originalIndex, message: describeError(error) })
-      }
-    }
+    const queued: QueuedDescriptor[] = remaining.map((entry) => ({
+      descriptorIndex: entry.originalIndex,
+      descriptor: entry.descriptor,
+      index: entry.descriptor.index,
+    }))
+
+    const { created, failed: creationFailures } = await createDescriptorsInWindow(
+      queued,
+      targetWindowId,
+      gateway,
+    )
+
+    restored.push(...created)
+    failed.push(
+      ...creationFailures.map((failure) => ({ id: failure.descriptorIndex, message: failure.message })),
+    )
   }
 
-  for (const tab of restored) {
-    if (!tab.descriptor.pinned) {
-      continue
-    }
-
-    try {
-      await gateway.setPinned([tab.tabId], true)
-    } catch {
-      // The tab itself still exists and counts as restored; losing its
-      // pinned state isn't worth reporting as a failure.
-    }
-  }
-
-  await restoreGroups(restored, gateway)
+  await applyPinnedAndGroups(restored, gateway)
 
   return { succeeded: restored.map((tab) => tab.tabId), failed }
-}
-
-async function restoreGroups(restored: RestoredTab[], gateway: BrowserGateway): Promise<void> {
-  const buckets = new Map<
-    string,
-    { windowId: number; title: string; color: TabGroupColor; tabIds: number[] }
-  >()
-
-  for (const tab of restored) {
-    const group = tab.descriptor.group
-
-    if (!group) {
-      continue
-    }
-
-    const key = `${tab.windowId}::${group.title}::${group.color}`
-    const bucket = buckets.get(key) ?? {
-      windowId: tab.windowId,
-      title: group.title,
-      color: group.color,
-      tabIds: [],
-    }
-    bucket.tabIds.push(tab.tabId)
-    buckets.set(key, bucket)
-  }
-
-  for (const bucket of buckets.values()) {
-    try {
-      await gateway.groupCreatedTabs(bucket.tabIds, bucket.windowId, {
-        title: bucket.title,
-        color: bucket.color,
-      })
-    } catch {
-      // The tabs still exist and count as restored even if regrouping fails.
-    }
-  }
 }
 
 function isRestorableUrl(url: string): boolean {
