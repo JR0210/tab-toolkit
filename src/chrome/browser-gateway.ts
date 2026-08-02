@@ -52,6 +52,7 @@ export interface BrowserGateway {
   ): Promise<void>
   createWindowWithTab(tabId: number): Promise<{ windowId: number; tabId: number }>
   moveTabs(tabIds: readonly number[], windowId: number, index: number): Promise<BulkResult>
+  moveTab(tabId: number, windowId: number, index: number): Promise<void>
 }
 
 export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGateway {
@@ -185,6 +186,9 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
           await chrome.tabs.move([id], { windowId, index })
         })
       }
+    },
+    async moveTab(tabId, windowId, index) {
+      await chrome.tabs.move([tabId], { windowId, index })
     },
   }
 }

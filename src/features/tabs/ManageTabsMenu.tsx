@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import {
   ArchiveIcon,
+  ArrowDownAZIcon,
   ChevronDownIcon,
   ExternalLinkIcon,
+  GlobeIcon,
   PinIcon,
   PinOffIcon,
   RefreshCwIcon,
@@ -14,6 +16,8 @@ import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import type { BulkResult, TabRecord } from '../../domain/browser'
 import { moveSelectionToNewWindow } from '../organise/move-to-window'
+import { arrangeSelection } from '../organise/sort-tabs'
+import type { ArrangeSort } from '../organise/sort-tabs'
 import { Button } from '../../shared/ui/button'
 import {
   DropdownMenu,
@@ -132,6 +136,26 @@ export function ManageTabsMenu({
     }
   }
 
+  const handleArrange = async (sort: ArrangeSort) => {
+    setPending(true)
+
+    try {
+      const result = await arrangeSelection(tabs, sort, gateway)
+      showBulkResultToast(result, 'Arranged')
+    } catch {
+      toast.error('Could not arrange the tabs. Try again.')
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setPending(false)
+      }
+    }
+  }
+
+  const handleSortByTitle = () => handleArrange('title')
+  const handleSortByDomain = () => handleArrange('domain')
+
   const handleClose = async () => {
     setPending(true)
 
@@ -186,6 +210,14 @@ export function ManageTabsMenu({
         <DropdownMenuItem onClick={handleMoveToNewWindow} disabled={pending}>
           <ExternalLinkIcon />
           Move to new window
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSortByTitle} disabled={pending}>
+          <ArrowDownAZIcon />
+          Sort by title
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSortByDomain} disabled={pending}>
+          <GlobeIcon />
+          Sort by domain
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleClose} disabled={pending} variant="destructive">
           <XIcon />
