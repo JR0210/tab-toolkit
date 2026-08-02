@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
 import type { BrowserGateway } from './chrome/browser-gateway'
 import type { TabSnapshot } from './domain/browser'
+import type { CloseRepository, CloseSnapshot } from './features/tabs/close-repository'
 import { createSettingsRepository } from './shared/settings/settings-repository'
 import type { SettingsStorageArea } from './shared/settings/settings-repository'
 import { createStubBrowserGateway } from './test/browser-gateway-mock'
@@ -40,6 +41,19 @@ it('exposes Tabs as the current primary view and can switch to Workspaces', asyn
 
   expect(workspaces).toHaveAttribute('aria-current', 'page')
   expect(screen.getByRole('button', { name: 'Tabs' })).not.toHaveAttribute('aria-current')
+})
+
+it('opens Settings from the header and can reach the shortcuts reference from inside it', async () => {
+  // Catches the Settings button never being wired to open anything, and the
+  // Keyboard shortcuts entry point going missing from Settings.
+  const user = userEvent.setup()
+  renderApp()
+
+  await user.click(await screen.findByRole('button', { name: 'Settings' }))
+  expect(await screen.findByRole('dialog', { name: 'Settings' })).toBeVisible()
+
+  await user.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }))
+  expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible()
 })
 
 it('gives every header icon button an accessible name', () => {
@@ -113,14 +127,153 @@ it('reports a rejected theme save and recovers for a later write', async () => {
   })
 })
 
+it('Settings Reset clears an active filter while staying on the Tabs view', async () => {
+  // Catches Reset only persisting settings.copyFormat/scope/theme while
+  // leaving a stale filter in place -- the cross-tree reach documented in
+  // TabsToolbar.tsx's 'reset-filters' registration. Deliberately stays on
+  // the Tabs view throughout so TabsView/TabInteractionProvider never
+  // unmounts -- switching away and back would clear the filter on its own
+  // and the test wouldn't actually exercise the reset wiring.
+  const user = userEvent.setup()
+  renderApp({ gateway: createPinnedTabGateway() })
+
+  await user.click(await screen.findByRole('button', { name: 'Filter tabs' }))
+  await user.click(await screen.findByRole('checkbox', { name: 'Pinned' }))
+  expect(screen.getByRole('button', { name: /Filter tabs/ })).toHaveAccessibleName(
+    'Filter tabs, 1 active',
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await screen.findByRole('dialog', { name: 'Settings' })
+  await user.click(screen.getByRole('button', { name: 'Reset to defaults' }))
+
+  // The background is inert/aria-hidden while the Settings dialog is open
+  // (Base UI's modal behaviour), so close it before inspecting it.
+  await user.keyboard('{Escape}')
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument(),
+  )
+  expect(screen.getByRole('button', { name: 'Filter tabs' })).toHaveAccessibleName('Filter tabs')
+})
+
+it('Settings Reset switches back to the Tabs view when reset from Workspaces', async () => {
+  // Catches the AppShell-level 'reset-view' registration going missing.
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findByRole('button', { name: 'Tabs' })
+
+  await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+  expect(screen.getByRole('button', { name: 'Workspaces' })).toHaveAttribute('aria-current', 'page')
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await screen.findByRole('dialog', { name: 'Settings' })
+  await user.click(screen.getByRole('button', { name: 'Reset to defaults' }))
+
+  await user.keyboard('{Escape}')
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument(),
+  )
+  expect(screen.getByRole('button', { name: 'Tabs' })).toHaveAttribute('aria-current', 'page')
+})
+
+function createPinnedTabGateway(): BrowserGateway {
+  return createStubBrowserGateway({
+    async getSnapshot() {
+      return {
+        tabs: [
+          {
+            id: 1,
+            windowId: 1,
+            index: 0,
+            title: 'Pinned tab',
+            url: 'https://example.com/pinned',
+            domain: 'example.com',
+            faviconUrl: null,
+            pinned: true,
+            muted: false,
+            audible: false,
+            active: false,
+            discarded: false,
+            groupId: null,
+          },
+        ],
+        groups: [],
+        currentWindowId: 1,
+        capturedAt: 1,
+      }
+    },
+  })
+}
+
+it('switches views with the show-tabs/show-workspaces keyboard shortcuts', async () => {
+  // Catches view-switch shortcuts wired to stale state or not wired at all.
+  renderApp()
+  await screen.findByRole('button', { name: 'Tabs' })
+
+  fireKeydown({ key: '2', ctrlKey: true })
+  expect(screen.getByRole('button', { name: 'Workspaces' })).toHaveAttribute('aria-current', 'page')
+
+  fireKeydown({ key: '1', ctrlKey: true })
+  expect(screen.getByRole('button', { name: 'Tabs' })).toHaveAttribute('aria-current', 'page')
+})
+
+it('restores the last closed tabs with the undo-close keyboard shortcut', async () => {
+  // Catches undo-close either not being wired at the popup level or requiring
+  // a specific close toast to still be visible.
+  const snapshot: CloseSnapshot = {
+    closedAt: 1,
+    tabs: [{ url: 'https://example.com', title: 'Example', pinned: false, windowId: 1, index: 0 }],
+  }
+  const load = vi.fn().mockResolvedValue(snapshot)
+  const clear = vi.fn().mockResolvedValue(undefined)
+  const closeRepository: CloseRepository = { load, save: vi.fn(), clear }
+  const gateway = createStubBrowserGateway({
+    windowExists: vi.fn().mockResolvedValue(true),
+    createTab: vi.fn().mockResolvedValue(99),
+  })
+  renderApp({ gateway, closeRepository })
+  await screen.findByRole('button', { name: 'Tabs' })
+
+  fireKeydown({ key: 'z', ctrlKey: true })
+
+  await waitFor(() => expect(load).toHaveBeenCalledTimes(1))
+  await waitFor(() => expect(clear).toHaveBeenCalledTimes(1))
+})
+
+function fireKeydown(overrides: {
+  key: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
+}) {
+  act(() => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: overrides.key,
+        metaKey: overrides.metaKey ?? false,
+        ctrlKey: overrides.ctrlKey ?? false,
+        altKey: overrides.altKey ?? false,
+        shiftKey: overrides.shiftKey ?? false,
+        cancelable: true,
+        bubbles: true,
+      }),
+    )
+  })
+}
+
 function renderApp({
   theme = 'light',
   mediaQuery = createMediaQueryList(false),
   repository,
+  gateway,
+  closeRepository,
 }: {
   theme?: 'light' | 'dark' | 'system'
   mediaQuery?: TestMediaQueryList
   repository?: ReturnType<typeof createSettingsRepository>
+  gateway?: BrowserGateway
+  closeRepository?: CloseRepository
 } = {}) {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(mediaQuery))
   const storage: SettingsStorageArea = {
@@ -136,7 +289,8 @@ function renderApp({
   return render(
     <App
       repository={repository ?? createSettingsRepository(storage)}
-      gateway={createPendingBrowserGateway()}
+      gateway={gateway ?? createPendingBrowserGateway()}
+      closeRepository={closeRepository}
     />,
   )
 }

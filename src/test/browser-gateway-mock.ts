@@ -9,6 +9,9 @@ import type { BulkResult, TabSnapshot } from '../domain/browser'
  */
 export function createStubBrowserGateway(overrides: Partial<BrowserGateway> = {}): BrowserGateway {
   return {
+    getPlatformInfo: vi.fn().mockResolvedValue('non-mac'),
+    getManifestVersion: vi.fn().mockReturnValue('0.1.0'),
+    openUrl: vi.fn().mockResolvedValue(undefined),
     getSnapshot: vi.fn().mockResolvedValue(createEmptySnapshot()),
     activateTab: vi.fn().mockResolvedValue(undefined),
     setPinned: vi.fn().mockResolvedValue(createEmptyBulkResult()),

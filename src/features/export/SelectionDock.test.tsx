@@ -3,13 +3,16 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BrowserProvider } from '../../chrome/browser-context'
+import type { BrowserGateway } from '../../chrome/browser-gateway'
 import type { TabRecord, TabSnapshot } from '../../domain/browser'
+import { ShortcutHandlersProvider } from '../shortcuts/use-popup-shortcuts'
 import type { ClipboardGateway } from '../../platform/clipboard-gateway'
 import { SettingsContext } from '../../shared/settings/settings-context'
 import type { Settings } from '../../shared/settings/settings'
 import type { SettingsContextValue } from '../../shared/settings/settings-context'
 import { Toaster } from '../../shared/ui/toaster'
 import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
+import type { CloseRepository } from '../tabs/close-repository'
 import { TabInteractionProvider } from '../tabs/tab-interaction-provider'
 import { TabsContext } from '../tabs/tabs-context'
 import type { TabsContextValue } from '../tabs/tabs-context'
@@ -123,6 +126,53 @@ describe('SelectionDock', () => {
     expect(await screen.findByRole('dialog', { name: 'Export tabs' })).toBeVisible()
   })
 
+  it('copies the selected tabs with the copy-selected keyboard shortcut', async () => {
+    const clipboard = createClipboardGateway()
+    renderDock({ preselectedIds: [2, 3], copyFormat: 'urls', clipboard })
+    await screen.findByRole('toolbar', { name: 'Selected tabs' })
+
+    fireKeydown({ key: 'c', ctrlKey: true })
+
+    await waitFor(() =>
+      expect(clipboard.writeText).toHaveBeenCalledExactlyOnceWith(
+        formatTabsForClipboard([createTab(2, 1), createTab(3, 1, 1)], 'urls'),
+      ),
+    )
+  })
+
+  it('opens the export dialog with the export-selected keyboard shortcut', async () => {
+    renderDock({ preselectedIds: [2, 3], copyFormat: 'urls' })
+    await screen.findByRole('toolbar', { name: 'Selected tabs' })
+
+    fireKeydown({ key: 'e', ctrlKey: true })
+
+    expect(await screen.findByRole('dialog', { name: 'Export tabs' })).toBeVisible()
+  })
+
+  it('closes the selected tabs with the close-selected keyboard shortcut', async () => {
+    const removeTabs = vi.fn().mockResolvedValue({ succeeded: [2], failed: [] })
+    renderDock({
+      preselectedIds: [2],
+      copyFormat: 'urls',
+      gateway: createStubBrowserGateway({ removeTabs }),
+      closeRepository: createFakeCloseRepository(),
+    })
+    await screen.findByRole('toolbar', { name: 'Selected tabs' })
+
+    fireKeydown({ key: 'Delete', ctrlKey: true })
+
+    await waitFor(() => expect(removeTabs).toHaveBeenCalledExactlyOnceWith([2]))
+    expect(await screen.findByText('Undo')).toBeVisible()
+  })
+
+  it('does nothing and does not prevent default for copy-selected while nothing is selected', () => {
+    renderDock({ preselectedIds: [] })
+
+    const event = fireKeydown({ key: 'c', ctrlKey: true })
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
   it('copies only the explicitly given tabs, ignoring the currently selected set in context', async () => {
     // Catches a row-level copy action that silently reads selectedTabs from context
     // instead of the explicit tab list it was called with.
@@ -144,28 +194,66 @@ function renderDock({
   copyFormat = 'markdown',
   clipboard,
   updateSettings = vi.fn().mockResolvedValue(undefined),
+  gateway = createStubBrowserGateway(),
+  closeRepository = createFakeCloseRepository(),
 }: {
   preselectedIds: number[]
   copyFormat?: Settings['copyFormat']
   clipboard?: ClipboardGateway
   updateSettings?: SettingsContextValue['updateSettings']
+  gateway?: BrowserGateway
+  closeRepository?: CloseRepository
 }) {
   const tabs = [createTab(2, 1), createTab(3, 1, 1)]
   const snapshot = createSnapshot(tabs)
 
   return render(
-    <BrowserProvider gateway={createStubBrowserGateway()}>
+    <BrowserProvider gateway={gateway}>
       <TabsContext value={createTabsContext(snapshot)}>
         <SettingsContext value={createSettingsContext(copyFormat, updateSettings)}>
           <TabInteractionProvider>
-            <SelectPreset ids={preselectedIds} />
-            <SelectionDock clipboard={clipboard} />
+            <ShortcutHandlersProvider>
+              <SelectPreset ids={preselectedIds} />
+              <SelectionDock clipboard={clipboard} closeRepository={closeRepository} />
+            </ShortcutHandlersProvider>
           </TabInteractionProvider>
           <Toaster />
         </SettingsContext>
       </TabsContext>
     </BrowserProvider>,
   )
+}
+
+function createFakeCloseRepository(): CloseRepository {
+  return {
+    load: vi.fn().mockResolvedValue(null),
+    save: vi.fn().mockResolvedValue(undefined),
+    clear: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+function fireKeydown(overrides: {
+  key: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
+}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', {
+    key: overrides.key,
+    metaKey: overrides.metaKey ?? false,
+    ctrlKey: overrides.ctrlKey ?? false,
+    altKey: overrides.altKey ?? false,
+    shiftKey: overrides.shiftKey ?? false,
+    cancelable: true,
+    bubbles: true,
+  })
+
+  act(() => {
+    document.dispatchEvent(event)
+  })
+
+  return event
 }
 
 function SelectPreset({ ids }: { ids: number[] }) {

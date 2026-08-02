@@ -47,6 +47,14 @@ export function createChromeTabGroup(
 }
 
 export function createChromeBrowserApiMock() {
+  const getPlatformInfo = vi
+    .fn<ChromeBrowserApi['runtime']['getPlatformInfo']>()
+    .mockResolvedValue({ os: 'win', arch: 'x86-64', nacl_arch: 'x86-64' })
+  const getManifest = vi.fn<ChromeBrowserApi['runtime']['getManifest']>().mockReturnValue({
+    manifest_version: 3,
+    name: 'Tab Toolkit',
+    version: '0.1.0',
+  } as chrome.runtime.Manifest)
   const getAll = vi.fn<ChromeBrowserApi['windows']['getAll']>().mockResolvedValue([])
   const getCurrent = vi
     .fn<ChromeBrowserApi['windows']['getCurrent']>()
@@ -77,6 +85,10 @@ export function createChromeBrowserApiMock() {
 
   return {
     api: {
+      runtime: {
+        getPlatformInfo,
+        getManifest,
+      },
       windows: {
         getAll,
         getCurrent,
@@ -99,6 +111,8 @@ export function createChromeBrowserApiMock() {
         update: updateTabGroup,
       },
     },
+    getPlatformInfo,
+    getManifest,
     getAll,
     getCurrent,
     updateWindow,

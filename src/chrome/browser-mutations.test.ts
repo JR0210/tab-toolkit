@@ -381,3 +381,28 @@ describe('createChromeBrowserGateway window and tab creation', () => {
     expect(ungroupTabs).not.toHaveBeenCalled()
   })
 })
+
+describe('createChromeBrowserGateway settings surface', () => {
+  it('opens a URL as a new tab', async () => {
+    const { api, createTab } = createChromeBrowserApiMock()
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.openUrl('https://github.com/JR0210/tab-toolkit')
+
+    expect(createTab).toHaveBeenCalledExactlyOnceWith({
+      url: 'https://github.com/JR0210/tab-toolkit',
+    })
+  })
+
+  it('reads the manifest version', () => {
+    const { api, getManifest } = createChromeBrowserApiMock()
+    getManifest.mockReturnValue({
+      manifest_version: 3,
+      name: 'Tab Toolkit',
+      version: '9.9.9',
+    } as chrome.runtime.Manifest)
+    const gateway = createChromeBrowserGateway(api)
+
+    expect(gateway.getManifestVersion()).toBe('9.9.9')
+  })
+})
