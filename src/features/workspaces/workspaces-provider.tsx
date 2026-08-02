@@ -168,6 +168,7 @@ export function WorkspacesProvider({
         renameWorkspace,
         deleteWorkspace,
         undoDelete,
+        refresh,
       }}
     >
       {children}

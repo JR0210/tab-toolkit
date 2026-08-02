@@ -6,10 +6,7 @@ import type { TabDescriptor } from '../../domain/browser'
 describe('restoreIntoNewWindow', () => {
   it('creates a new window from the first descriptor and the rest as inactive tabs in order', async () => {
     const createWindow = vi.fn().mockResolvedValue({ windowId: 9, tabId: 201 })
-    const createTab = vi
-      .fn()
-      .mockResolvedValueOnce(202)
-      .mockResolvedValueOnce(203)
+    const createTab = vi.fn().mockResolvedValueOnce(202).mockResolvedValueOnce(203)
     const gateway = createStubBrowserGateway({ createWindow, createTab })
     const descriptors = [
       descriptor({ url: 'https://first.example' }),

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertCircleIcon,
   DownloadIcon,
@@ -7,6 +7,7 @@ import {
   SaveIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import { Button } from '../../shared/ui/button'
 import {
   Dialog,
@@ -17,7 +18,9 @@ import {
   DialogTitle,
 } from '../../shared/ui/dialog'
 import { Input } from '../../shared/ui/input'
+import { ImportDialog } from '../import/ImportDialog'
 import { useWorkspaces } from './use-workspaces'
+import { createChromeWorkspaceRepository } from './workspace-repository'
 import { WorkspaceCard } from './WorkspaceCard'
 
 export function WorkspacesView() {
@@ -29,10 +32,19 @@ export function WorkspacesView() {
     renameWorkspace,
     deleteWorkspace,
     undoDelete,
+    refresh,
   } = useWorkspaces()
+  const gateway = useBrowserGateway()
+  // Stable across renders so it doesn't defeat any memoization downstream;
+  // createChromeWorkspaceRepository() resolves the chrome API lazily per
+  // call, so a fresh instance here is functionally identical to the one
+  // WorkspacesProvider uses -- both always read/write the same underlying
+  // chrome.storage.local, there's no client-side cache to desync.
+  const importRepository = useMemo(() => createChromeWorkspaceRepository(), [])
   const [saveOpen, setSaveOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const openSaveDialog = () => {
     setDraftName('')
@@ -112,13 +124,7 @@ export function WorkspacesView() {
           <p className="text-xs text-muted-foreground">Save sets of tabs and reopen them later.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            aria-label="Import URLs (coming soon)"
-            title="Importing a list of URLs is coming in a future update"
-          >
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
             <DownloadIcon />
             Import URLs
           </Button>
@@ -191,6 +197,14 @@ export function WorkspacesView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        gateway={gateway}
+        repository={importRepository}
+        onImported={() => void refresh()}
+      />
     </div>
   )
 }

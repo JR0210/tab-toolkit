@@ -98,7 +98,10 @@ export async function restoreDescriptors(
 
     restored.push(...created)
     failed.push(
-      ...creationFailures.map((failure) => ({ id: failure.descriptorIndex, message: failure.message })),
+      ...creationFailures.map((failure) => ({
+        id: failure.descriptorIndex,
+        message: failure.message,
+      })),
     )
   }
 
