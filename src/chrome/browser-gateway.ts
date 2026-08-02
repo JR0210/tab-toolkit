@@ -185,9 +185,18 @@ export function createChromeBrowserGateway(chrome: ChromeBrowserApi): BrowserGat
         return { succeeded: [...tabIds], failed: [] }
       } catch {
         // Mirrors removeTabs: a single bad id can reject the whole batch, so
-        // retry one at a time to isolate the real failures.
+        // retry one at a time to isolate the real failures. For a specific
+        // target index (not -1/"append"), each successful single move must
+        // target the next index along -- moving every tab to the SAME fixed
+        // index would insert each one ahead of the last, reversing order.
+        let nextIndex = index
+
         return runBulk(tabIds, async (id) => {
-          await chrome.tabs.move([id], { windowId, index })
+          await chrome.tabs.move([id], { windowId, index: nextIndex })
+
+          if (index !== -1) {
+            nextIndex += 1
+          }
         })
       }
     },

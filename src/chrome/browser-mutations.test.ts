@@ -272,6 +272,42 @@ describe('createChromeBrowserGateway window and tab creation', () => {
     expect(result).toEqual({ succeeded: [1], failed: [{ id: 2, message: 'No tab with id: 2' }] })
   })
 
+  it('increments the target index on each retried single move for a specific (non-append) index, to preserve order', async () => {
+    const { api, moveTabs } = createChromeBrowserApiMock()
+    moveTabs.mockImplementation((tabIds) => {
+      if (tabIds.length > 1) {
+        return Promise.reject(new Error('batch failed'))
+      }
+      return Promise.resolve([])
+    })
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.moveTabs([1, 2, 3], 9, 5)
+
+    // Moving every tab to the SAME fixed index would reverse their order
+    // (each insertion pushes the previous ones one slot later), so the
+    // fallback must advance the target index after each successful move.
+    expect(moveTabs).toHaveBeenCalledWith([1], { windowId: 9, index: 5 })
+    expect(moveTabs).toHaveBeenCalledWith([2], { windowId: 9, index: 6 })
+    expect(moveTabs).toHaveBeenCalledWith([3], { windowId: 9, index: 7 })
+  })
+
+  it('keeps retrying every single move at index -1 ("append"), since repeated appends already preserve order', async () => {
+    const { api, moveTabs } = createChromeBrowserApiMock()
+    moveTabs.mockImplementation((tabIds) => {
+      if (tabIds.length > 1) {
+        return Promise.reject(new Error('batch failed'))
+      }
+      return Promise.resolve([])
+    })
+    const gateway = createChromeBrowserGateway(api)
+
+    await gateway.moveTabs([1, 2], 9, -1)
+
+    expect(moveTabs).toHaveBeenCalledWith([1], { windowId: 9, index: -1 })
+    expect(moveTabs).toHaveBeenCalledWith([2], { windowId: 9, index: -1 })
+  })
+
   it('moves a single tab', async () => {
     const { api, moveTabs } = createChromeBrowserApiMock()
     const gateway = createChromeBrowserGateway(api)
