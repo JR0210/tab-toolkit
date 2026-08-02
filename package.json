@@ -15,7 +15,9 @@
     "typecheck": "vp check --no-fmt --no-lint",
     "preview": "vp preview",
     "icons": "node scripts/generate-icons.mjs",
-    "verify:manifest": "node scripts/verify-manifest.mjs"
+    "verify:manifest": "node scripts/verify-manifest.mjs",
+    "verify:build": "node scripts/verify-build.mjs",
+    "verify:release": "npm run check && npm test && npm run build && npm run verify:manifest && npm run verify:build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
