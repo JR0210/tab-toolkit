@@ -129,7 +129,42 @@ describe('ImportDialog', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
     expect((textarea as HTMLTextAreaElement).value).toBe('https://a.example')
   })
+
+  it('does not clear the draft when the dialog is dismissed while an import is still in flight', async () => {
+    const user = userEvent.setup()
+    const pending = createDeferred<{ windowId: number; tabId: number }>()
+    const gateway = createStubBrowserGateway({
+      createWindow: vi.fn().mockReturnValue(pending.promise),
+    })
+
+    renderDialog({ gateway })
+
+    const textarea = screen.getByLabelText('URLs')
+    await user.click(textarea)
+    await user.paste('https://a.example')
+    await user.type(screen.getByLabelText(/Save as workspace/), 'Reading list')
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+
+    // The import hasn't resolved yet -- dismiss the dialog via Cancel now.
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect((textarea as HTMLTextAreaElement).value).toBe('https://a.example')
+    expect(screen.getByLabelText(/Save as workspace/)).toHaveValue('Reading list')
+
+    pending.resolve({ windowId: 9, tabId: 1 })
+  })
 })
+
+function createDeferred<Value>() {
+  let resolve: (value: Value) => void = () => {
+    throw new Error('Deferred promise is not initialized')
+  }
+  const promise = new Promise<Value>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
 
 function renderDialog({
   gateway = createStubBrowserGateway(),

@@ -82,7 +82,11 @@ export function ImportDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
+        // Don't discard the draft if the dialog is dismissed while an
+        // import is still in flight -- if it later fails, the user would
+        // otherwise lose their pasted URLs and workspace name with no way
+        // to retry. A successful import already resets the draft itself.
+        if (!nextOpen && !importing) {
           resetDraft()
         }
         onOpenChange(nextOpen)
