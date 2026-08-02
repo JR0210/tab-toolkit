@@ -1,4 +1,5 @@
 import { AlertCircleIcon, LoaderCircleIcon, PanelsTopLeftIcon, SearchXIcon } from 'lucide-react'
+import { SelectionDock } from '../export/SelectionDock'
 import { Button } from '../../shared/ui/button'
 import { TabInteractionProvider } from './tab-interaction-provider'
 import { EMPTY_FILTERS } from './tab-query'
@@ -117,6 +118,8 @@ function TabsViewContent() {
           </div>
         )}
       </div>
+
+      <SelectionDock />
     </div>
   )
 }
