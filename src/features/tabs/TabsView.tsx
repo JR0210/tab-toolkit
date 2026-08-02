@@ -1,11 +1,23 @@
-import { AlertCircleIcon, LoaderCircleIcon, PanelsTopLeftIcon } from 'lucide-react'
+import { AlertCircleIcon, LoaderCircleIcon, PanelsTopLeftIcon, SearchXIcon } from 'lucide-react'
 import { Button } from '../../shared/ui/button'
-import { groupTabsByWindow } from './tab-inventory'
+import { TabInteractionProvider } from './tab-interaction-provider'
+import { EMPTY_FILTERS } from './tab-query'
+import { TabsToolbar } from './TabsToolbar'
+import { useTabInteractions } from './use-tab-interactions'
 import { useTabs } from './use-tabs'
 import { WindowSection } from './WindowSection'
 
 export function TabsView() {
+  return (
+    <TabInteractionProvider>
+      <TabsViewContent />
+    </TabInteractionProvider>
+  )
+}
+
+function TabsViewContent() {
   const { activateTab, error, refresh, snapshot, status } = useTabs()
+  const { activeFilterCount, query, sections, setFilters, setScope } = useTabInteractions()
 
   if (status === 'loading') {
     return (
@@ -54,23 +66,56 @@ export function TabsView() {
   }
 
   const groupsById = new Map(snapshot.groups.map((group) => [group.id, group]))
-  const windows = groupTabsByWindow(snapshot.tabs)
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-canvas px-2 py-2">
-      <div className="flex flex-col gap-3">
-        {windows.map(({ tabs, windowId }) => (
-          <WindowSection
-            key={windowId}
-            windowId={windowId}
-            tabs={tabs}
-            groupsById={groupsById}
-            current={windowId === snapshot.currentWindowId}
-            onActivate={(tabId, containingWindowId) => {
-              void activateTab(tabId, containingWindowId)
-            }}
-          />
-        ))}
+    <div className="flex min-h-0 flex-1 flex-col bg-canvas">
+      <TabsToolbar />
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        {sections.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {sections.map(({ tabs, windowId }) => (
+              <WindowSection
+                key={windowId}
+                windowId={windowId}
+                tabs={tabs}
+                groupsById={groupsById}
+                current={windowId === snapshot.currentWindowId}
+                onActivate={(tabId, containingWindowId) => {
+                  void activateTab(tabId, containingWindowId)
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-h-48 items-center justify-center px-6 py-12 text-center">
+            <div className="flex max-w-sm flex-col items-center gap-2">
+              <span className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <SearchXIcon aria-hidden="true" className="size-4" />
+              </span>
+              <h2 className="text-sm font-semibold text-foreground">No tabs match</h2>
+              <p className="text-xs text-muted-foreground">
+                Try adjusting your search, filters, or scope to see more tabs.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                {activeFilterCount > 0 ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters({ ...EMPTY_FILTERS })}
+                  >
+                    Clear filters
+                  </Button>
+                ) : null}
+                {query.scope === 'current' ? (
+                  <Button variant="ghost" size="sm" onClick={() => setScope('all')}>
+                    Search all windows
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

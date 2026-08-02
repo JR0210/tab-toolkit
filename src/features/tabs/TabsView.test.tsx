@@ -24,6 +24,7 @@ describe('TabsView', () => {
     renderApp(gateway)
 
     expect(await screen.findByText('4 tabs · 2 windows')).toBeVisible()
+    await user.click(screen.getByRole('tab', { name: 'All windows' }))
 
     const headings = screen.getAllByRole('heading', { level: 2 })
     expect(headings.map((heading) => heading.textContent)).toEqual([
@@ -94,6 +95,7 @@ describe('TabsView', () => {
     const user = userEvent.setup()
 
     renderApp(createGateway({ snapshots: [snapshot, snapshot], activateTab }))
+    await user.click(await screen.findByRole('tab', { name: 'All windows' }))
 
     const firstInbox = await screen.findByRole('button', {
       name: 'Activate Inbox (tab 100, window 2)',
@@ -136,7 +138,7 @@ describe('TabsView', () => {
     await screen.findByText('1 tab · 1 window')
     const row = document.querySelector('[data-tab-id="300"]')
     expect(row).not.toBeNull()
-    expect(row!.firstElementChild).toHaveTextContent('F')
+    expect(row!.querySelector('span[aria-hidden="true"]')).toHaveTextContent('F')
   })
 
   it('announces loading while the live snapshot is pending', () => {
