@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { ExternalLinkIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import { toast } from 'sonner'
+import { useBrowserGateway } from '../../chrome/use-browser-gateway'
+import { useTabs } from '../tabs/use-tabs'
+import { openWorkspace } from './open-workspace'
 import { formatRelativeDate } from './relative-date'
 import type { Workspace } from './workspace'
 import { Button } from '../../shared/ui/button'
@@ -25,10 +29,13 @@ interface WorkspaceCardProps {
 }
 
 export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceCardProps) {
+  const gateway = useBrowserGateway()
+  const { refresh } = useTabs()
   const [renameOpen, setRenameOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [draftName, setDraftName] = useState(workspace.name)
   const [pending, setPending] = useState(false)
+  const [opening, setOpening] = useState(false)
 
   const tabCount = workspace.tabs.length
   const visibleTabs = workspace.tabs.slice(0, MAX_VISIBLE_FAVICONS)
@@ -72,6 +79,41 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
       // keep the dialog open (skipped above) so the user can retry.
     } finally {
       setPending(false)
+    }
+  }
+
+  const handleOpen = async () => {
+    // Guards against a second click firing a second restore while the first
+    // is still in flight.
+    if (opening) {
+      return
+    }
+
+    setOpening(true)
+
+    try {
+      const result = await openWorkspace(workspace, gateway)
+      const openedCount = result.created.length
+      const failedCount = result.failed.length
+      const message = `Opened ${openedCount} ${openedCount === 1 ? 'tab' : 'tabs'} from “${workspace.name}”${
+        failedCount > 0 ? `; ${failedCount} could not be opened.` : ''
+      }`
+
+      if (failedCount === 0) {
+        toast.success(message)
+      } else if (openedCount === 0) {
+        toast.error(message)
+      } else {
+        toast.warning(message)
+      }
+    } catch {
+      toast.error(`Could not open “${workspace.name}”. Try again.`)
+    } finally {
+      try {
+        await refresh()
+      } finally {
+        setOpening(false)
+      }
     }
   }
 
@@ -125,9 +167,9 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
         variant="outline"
         size="sm"
         className="w-full"
-        disabled
-        aria-label={`Open workspace: ${workspace.name} (coming soon)`}
-        title="Opening a saved workspace into the browser is coming in a future update"
+        disabled={opening}
+        aria-label={`Open workspace: ${workspace.name}`}
+        onClick={() => void handleOpen()}
       >
         <ExternalLinkIcon />
         Open workspace

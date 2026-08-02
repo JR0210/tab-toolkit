@@ -1,6 +1,11 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { BrowserProvider } from '../../chrome/browser-context'
+import type { BrowserGateway } from '../../chrome/browser-gateway'
+import { createStubBrowserGateway } from '../../test/browser-gateway-mock'
+import { TabsContext } from '../tabs/tabs-context'
+import type { TabsContextValue } from '../tabs/tabs-context'
 import type { Workspace } from './workspace'
 import { WorkspaceCard } from './WorkspaceCard'
 
@@ -10,7 +15,7 @@ describe('WorkspaceCard', () => {
       tabs: [createDescriptor('https://a.example.com'), createDescriptor('https://b.example.com')],
     })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     expect(screen.getByText('2 tabs')).toBeVisible()
   })
@@ -18,7 +23,7 @@ describe('WorkspaceCard', () => {
   it('uses singular "tab" for a workspace with exactly one tab', () => {
     const workspace = createWorkspace({ tabs: [createDescriptor('https://a.example.com')] })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     expect(screen.getByText('1 tab')).toBeVisible()
   })
@@ -34,7 +39,7 @@ describe('WorkspaceCard', () => {
       ],
     })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     expect(screen.getAllByTestId('workspace-favicon')).toHaveLength(4)
     expect(screen.getByTestId('workspace-favicon-overflow')).toHaveTextContent('+1')
@@ -43,7 +48,7 @@ describe('WorkspaceCard', () => {
   it('renders exactly as many favicon indicators as tabs when there are fewer than 4', () => {
     const workspace = createWorkspace({ tabs: [createDescriptor('https://a.example.com')] })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     expect(screen.getAllByTestId('workspace-favicon')).toHaveLength(1)
     expect(screen.queryByTestId('workspace-favicon-overflow')).not.toBeInTheDocument()
@@ -52,7 +57,7 @@ describe('WorkspaceCard', () => {
   it('falls back to a safe placeholder when a tab url has no recognizable domain', () => {
     const workspace = createWorkspace({ tabs: [createDescriptor('not a real url')] })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     expect(screen.getAllByTestId('workspace-favicon')[0]).toHaveTextContent('?')
   })
@@ -60,14 +65,7 @@ describe('WorkspaceCard', () => {
   it('formats the relative date deterministically from an injected clock', () => {
     const workspace = createWorkspace({ updatedAt: '2026-08-01T12:00:00.000Z' })
 
-    render(
-      <WorkspaceCard
-        workspace={workspace}
-        onRename={vi.fn()}
-        onDelete={vi.fn()}
-        now={new Date('2026-08-01T12:05:00.000Z')}
-      />,
-    )
+    renderCard({ workspace, now: new Date('2026-08-01T12:05:00.000Z') })
 
     expect(screen.getByText(/5 minutes ago/)).toBeVisible()
   })
@@ -76,7 +74,7 @@ describe('WorkspaceCard', () => {
     const user = userEvent.setup()
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace })
 
     await user.click(screen.getByRole('button', { name: 'Rename Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -94,7 +92,7 @@ describe('WorkspaceCard', () => {
     const onRename = vi.fn().mockResolvedValue(undefined)
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={onRename} onDelete={vi.fn()} />)
+    renderCard({ workspace, onRename })
 
     await user.click(screen.getByRole('button', { name: 'Rename Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -112,7 +110,7 @@ describe('WorkspaceCard', () => {
     const onDelete = vi.fn().mockResolvedValue(undefined)
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={onDelete} />)
+    renderCard({ workspace, onDelete })
 
     await user.click(screen.getByRole('button', { name: 'Delete Research' }))
 
@@ -125,7 +123,7 @@ describe('WorkspaceCard', () => {
     const onDelete = vi.fn().mockResolvedValue(undefined)
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={onDelete} />)
+    renderCard({ workspace, onDelete })
 
     await user.click(screen.getByRole('button', { name: 'Delete Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -139,7 +137,7 @@ describe('WorkspaceCard', () => {
     const onRename = vi.fn().mockRejectedValue(new Error('storage unavailable'))
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={onRename} onDelete={vi.fn()} />)
+    renderCard({ workspace, onRename })
 
     await user.click(screen.getByRole('button', { name: 'Rename Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -155,7 +153,7 @@ describe('WorkspaceCard', () => {
     const onRename = vi.fn().mockReturnValue(pending.promise)
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={onRename} onDelete={vi.fn()} />)
+    renderCard({ workspace, onRename })
 
     await user.click(screen.getByRole('button', { name: 'Rename Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -172,7 +170,7 @@ describe('WorkspaceCard', () => {
     const onDelete = vi.fn().mockRejectedValue(new Error('storage unavailable'))
     const workspace = createWorkspace({ name: 'Research' })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={onDelete} />)
+    renderCard({ workspace, onDelete })
 
     await user.click(screen.getByRole('button', { name: 'Delete Research' }))
     const dialog = await screen.findByRole('dialog')
@@ -182,13 +180,56 @@ describe('WorkspaceCard', () => {
     expect(screen.getByRole('dialog')).toBeVisible()
   })
 
-  it('renders the Open workspace control as disabled with explanatory text', () => {
-    const workspace = createWorkspace({})
+  it('opens a workspace by forwarding it to restoreIntoNewWindow via the browser gateway', async () => {
+    const user = userEvent.setup()
+    const createWindow = vi.fn().mockResolvedValue({ windowId: 9, tabId: 1 })
+    const gateway = createStubBrowserGateway({ createWindow })
+    const workspace = createWorkspace({
+      name: 'Research',
+      tabs: [createDescriptor('https://a.example.com')],
+    })
 
-    render(<WorkspaceCard workspace={workspace} onRename={vi.fn()} onDelete={vi.fn()} />)
+    renderCard({ workspace, gateway })
 
-    const openButton = screen.getByRole('button', { name: /Open workspace/ })
-    expect(openButton).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Open workspace: Research' }))
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith('https://a.example.com')
+  })
+
+  it('invokes restore only once when the Open workspace button is double-clicked while pending', async () => {
+    const user = userEvent.setup()
+    const createWindow = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ windowId: 9, tabId: 1 }), 20)),
+      )
+    const gateway = createStubBrowserGateway({ createWindow })
+    const workspace = createWorkspace({
+      name: 'Research',
+      tabs: [createDescriptor('https://a.example.com')],
+    })
+
+    renderCard({ workspace, gateway })
+
+    const openButton = screen.getByRole('button', { name: 'Open workspace: Research' })
+    await user.dblClick(openButton)
+
+    expect(createWindow).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes the tab snapshot after opening a workspace', async () => {
+    const user = userEvent.setup()
+    const gateway = createStubBrowserGateway({
+      createWindow: vi.fn().mockResolvedValue({ windowId: 9, tabId: 1 }),
+    })
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const workspace = createWorkspace({ tabs: [createDescriptor('https://a.example.com')] })
+
+    renderCard({ workspace, gateway, refresh })
+
+    await user.click(screen.getByRole('button', { name: /Open workspace/ }))
+
+    expect(refresh).toHaveBeenCalled()
   })
 })
 
@@ -216,4 +257,38 @@ function createDeferred<Value>() {
   })
 
   return { promise, resolve }
+}
+
+function renderCard({
+  workspace,
+  onRename = vi.fn().mockResolvedValue(undefined),
+  onDelete = vi.fn().mockResolvedValue(undefined),
+  now,
+  gateway = createStubBrowserGateway(),
+  refresh = vi.fn().mockResolvedValue(undefined),
+}: {
+  workspace: Workspace
+  onRename?: (id: string, newName: string) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
+  now?: Date
+  gateway?: BrowserGateway
+  refresh?: TabsContextValue['refresh']
+}) {
+  return render(
+    <BrowserProvider gateway={gateway}>
+      <TabsContext value={createTabsContextValue(refresh)}>
+        <WorkspaceCard workspace={workspace} onRename={onRename} onDelete={onDelete} now={now} />
+      </TabsContext>
+    </BrowserProvider>,
+  )
+}
+
+function createTabsContextValue(refresh: TabsContextValue['refresh']): TabsContextValue {
+  return {
+    snapshot: { tabs: [], groups: [], currentWindowId: 1, capturedAt: 0 },
+    status: 'ready',
+    error: null,
+    refresh,
+    activateTab: vi.fn().mockResolvedValue(undefined),
+  }
 }
