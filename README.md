@@ -23,43 +23,17 @@ tabs. No accounts, no backend, no analytics.
   plus a full set of platform-aware keyboard shortcuts (⌘ on macOS, Ctrl
   elsewhere) with a built-in reference dialog.
 
-## Principles
+## Installing
 
-- Local-only operation with no accounts, database, analytics, or data
-  collection — see [`docs/privacy.md`](docs/privacy.md) for the full,
-  verifiable disclosure.
-- Minimal Chrome permissions (`tabs`, `tabGroups`, `storage`,
-  `clipboardWrite` only) and no page-content modification — no content
-  scripts, no host permissions, no background service worker.
-- A compact, accessible, fixed-size (760×580) interface designed for a
-  browser extension popup.
-- Manifest V3 and modern Chrome APIs, minimum Chrome 102.
-
-## Stack
-
-- React 19
-- TypeScript 6
-- Vite+ 0.2
-
-Vite+ provides the Vite/Rolldown build, Vitest, Oxlint, Oxfmt, and
-TypeScript checking through one project-local toolchain.
-
-## Development
-
-Node.js 22.12 or newer is required.
+Tab Toolkit isn't on the Chrome Web Store yet. For now, build it yourself
+and load it as an unpacked extension — this needs [Node.js](https://nodejs.org)
+24 (or newer; see [`CONTRIBUTING.md`](CONTRIBUTING.md#prerequisites) for the
+exact version policy):
 
 ```bash
+git clone https://github.com/JR0210/tab-toolkit.git
+cd tab-toolkit
 npm install
-npm run dev
-```
-
-Note: this extension calls `chrome.*` APIs directly and will not function
-correctly in a plain browser tab — to see the real UI, build it and load it
-as an unpacked extension (below).
-
-## Loading the extension locally
-
-```bash
 npm run build
 ```
 
@@ -67,39 +41,14 @@ Then in Chrome: go to `chrome://extensions`, enable **Developer mode**,
 click **Load unpacked**, and select the `dist/` folder. Click the extension
 icon to open the popup.
 
-## Scripts
-
-- `npm run dev` starts the Vite development server.
-- `npm run format` formats the project with Oxfmt.
-- `npm run lint` runs Oxlint.
-- `npm run typecheck` runs Vite+'s TypeScript check.
-- `npm run check` runs formatting, linting, and type-checking.
-- `npm run check:fix` formats and applies safe lint fixes.
-- `npm test` runs Vitest through Vite+.
-- `npm run build` creates a production build in `dist`.
-- `npm run preview` serves the production build locally.
-- `npm run verify:manifest` checks `dist/manifest.json` against the
-  approved permissions/shape.
-- `npm run verify:build` checks `dist/` against release budgets (no chunk
-  over 300 KB, unpacked total under 750 KB excluding icons, no source maps,
-  no un-allowlisted remote references).
-- `npm run verify:release` runs the full gate: check, test, build,
-  verify:manifest, verify:build.
-- `npm run package` builds a versioned, verified Chrome Web Store ZIP under
-  `release/` (Windows/PowerShell).
-
 ## Privacy
 
-Tab Toolkit works entirely on your device. It does not collect, sell, or
-transmit browsing data, and initiates no remote network requests of its
-own. See [`docs/privacy.md`](docs/privacy.md) for exactly what's stored,
-where, and why each permission is required.
-
-## Release process
-
-See [`docs/release/manual-test-matrix.md`](docs/release/manual-test-matrix.md)
-for the manual QA checklist run against each release build, alongside the
-automated `npm run verify:release` gate.
+Tab Toolkit works entirely on your device — no accounts, no backend, no
+analytics, and no remote network requests of its own. It requests exactly
+four Chrome permissions (`tabs`, `tabGroups`, `storage`, `clipboardWrite`)
+and nothing else — no host permissions, no content scripts, no background
+service worker. See [`docs/privacy.md`](docs/privacy.md) for the full,
+verifiable disclosure of exactly what's stored, where, and why.
 
 ## License
 
@@ -109,3 +58,8 @@ Tab Toolkit is copyleft: you're free to use, study, modify, and redistribute
 it (including forks), but any distributed modified version must remain
 licensed under the GPL and ship its source. This keeps the project and its
 derivatives open — a closed-source or paid fork isn't permitted.
+
+## Contributing
+
+Want to develop, test, or package a release build? See
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
