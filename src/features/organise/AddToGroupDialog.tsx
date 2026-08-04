@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
-import type { TabGroupColor, TabRecord } from '../../domain/browser'
+import type { TabGroupColor, TabGroupRecord, TabRecord } from '../../domain/browser'
 import { Button } from '../../shared/ui/button'
 import {
   Dialog,
@@ -12,10 +12,16 @@ import {
   DialogTitle,
 } from '../../shared/ui/dialog'
 import { Input } from '../../shared/ui/input'
+import { RadioGroup } from '../../shared/ui/radio-group'
+import type { RadioOption } from '../../shared/ui/radio-group'
 import { Separator } from '../../shared/ui/separator'
 import { showBulkResultToast } from '../tabs/lifecycle-toast'
 import { useTabs } from '../tabs/use-tabs'
 import { GROUP_COLOR_PALETTE, addToChosenGroup } from './group-tabs'
+
+/** Sentinel for "create a new group," which isn't a real Chrome group id. */
+const CREATE_NEW_GROUP = 'new'
+type GroupSelectionValue = number | typeof CREATE_NEW_GROUP
 
 const COLOR_LABELS: Record<TabGroupColor, string> = {
   grey: 'Grey',
@@ -35,6 +41,18 @@ interface AddToGroupDialogProps {
   tabs: readonly TabRecord[]
 }
 
+interface GroupSelection {
+  mode: 'existing' | 'new'
+  groupId: number | null
+}
+
+function defaultSelection(eligibleGroups: readonly TabGroupRecord[]): GroupSelection {
+  return {
+    mode: eligibleGroups.length > 0 ? 'existing' : 'new',
+    groupId: eligibleGroups[0]?.id ?? null,
+  }
+}
+
 /**
  * Lets the user add the given selection to an existing Chrome tab group (in
  * one of the selection's windows) or create a new group. A Chrome tab group
@@ -52,12 +70,28 @@ export function AddToGroupDialog({ open, onOpenChange, tabs }: AddToGroupDialogP
   const windowIds = useMemo(() => new Set(tabs.map((tab) => tab.windowId)), [tabs])
   const eligibleGroups = (snapshot?.groups ?? []).filter((group) => windowIds.has(group.windowId))
 
-  const [selection, setSelection] = useState<{ mode: 'existing' | 'new'; groupId: number | null }>(
-    () => ({
-      mode: eligibleGroups.length > 0 ? 'existing' : 'new',
-      groupId: eligibleGroups[0]?.id ?? null,
-    }),
-  )
+  const [selection, setSelection] = useState<GroupSelection>(() => defaultSelection(eligibleGroups))
+
+  // Re-derive the default choice on every open -- this dialog stays mounted
+  // across open/close (only `open` toggles), so without this, a group
+  // created/removed elsewhere while the dialog was previously open wouldn't
+  // be reflected on reopen. Deliberately keyed on `open` alone, not
+  // `eligibleGroups`, so it doesn't reset the user's in-progress choice while
+  // the dialog is still open (e.g. a background refresh mid-interaction).
+  useEffect(() => {
+    if (open) {
+      setSelection(defaultSelection(eligibleGroups))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const groupOptions: RadioOption<GroupSelectionValue>[] = [
+    ...eligibleGroups.map((group) => ({
+      value: group.id as GroupSelectionValue,
+      label: group.title || 'Untitled group',
+    })),
+    { value: CREATE_NEW_GROUP, label: 'Create a new group' },
+  ]
 
   const selectedGroup =
     selection.mode === 'existing'
@@ -111,38 +145,23 @@ export function AddToGroupDialog({ open, onOpenChange, tabs }: AddToGroupDialogP
           </DialogDescription>
         </DialogHeader>
 
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            Group
-          </legend>
-
-          {eligibleGroups.map((group) => (
-            <label
-              key={group.id}
-              className="flex cursor-pointer items-center gap-2 py-0.5 text-[13px]"
-            >
-              <input
-                type="radio"
-                name="add-to-group-target"
-                checked={selection.mode === 'existing' && selection.groupId === group.id}
-                onChange={() => setSelection({ mode: 'existing', groupId: group.id })}
-                className="size-4 shrink-0 cursor-pointer accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              />
-              {group.title || 'Untitled group'}
-            </label>
-          ))}
-
-          <label className="flex cursor-pointer items-center gap-2 py-0.5 text-[13px]">
-            <input
-              type="radio"
-              name="add-to-group-target"
-              checked={selection.mode === 'new'}
-              onChange={() => setSelection({ mode: 'new', groupId: null })}
-              className="size-4 shrink-0 cursor-pointer accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-            Create a new group
-          </label>
-        </fieldset>
+        <RadioGroup<GroupSelectionValue>
+          legend="Group"
+          name="add-to-group-target"
+          options={groupOptions}
+          value={
+            selection.mode === 'existing'
+              ? (selection.groupId ?? CREATE_NEW_GROUP)
+              : CREATE_NEW_GROUP
+          }
+          onChange={(value) =>
+            setSelection(
+              value === CREATE_NEW_GROUP
+                ? { mode: 'new', groupId: null }
+                : { mode: 'existing', groupId: value },
+            )
+          }
+        />
 
         {selection.mode === 'existing' && excludedFromSelectedGroup > 0 ? (
           <p className="text-[12px] text-muted-foreground">

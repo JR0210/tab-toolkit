@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../shared/ui/dialog'
+import { RadioGroup } from '../../shared/ui/radio-group'
 import { Separator } from '../../shared/ui/separator'
 import { createChromeCloseRepository } from '../tabs/close-repository'
 import type { CloseRepository } from '../tabs/close-repository'
@@ -106,34 +107,31 @@ export function DuplicatesDialog({
         </DialogHeader>
 
         {sets.map((set, setIndex) => (
-          <fieldset key={set.url} className="flex flex-col gap-1.5">
+          <div key={set.url}>
             {setIndex > 0 ? <Separator className="mb-1" /> : null}
-            <legend className="mb-1 truncate text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-              {set.url}
-            </legend>
-            {set.candidates.map((candidate) => (
-              <label
-                key={candidate.id}
-                className="flex cursor-pointer items-center gap-2 py-0.5 text-[13px]"
-              >
-                <input
-                  type="radio"
-                  name={`duplicate-keeper-${set.url}`}
-                  checked={resolveKeepId(set) === candidate.id}
-                  onChange={() => {
-                    setOverrides((current) => {
-                      const next = new Map(current)
-                      next.set(set.url, candidate.id)
-                      return next
-                    })
-                  }}
-                  className="size-4 shrink-0 cursor-pointer accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                />
-                Keep {candidate.title}
-                {candidate.pinned ? ' (pinned)' : ''}
-              </label>
-            ))}
-          </fieldset>
+            <RadioGroup
+              legend={set.url}
+              legendClassName="truncate"
+              name={`duplicate-keeper-${set.url}`}
+              value={resolveKeepId(set)}
+              onChange={(candidateId) => {
+                setOverrides((current) => {
+                  const next = new Map(current)
+                  next.set(set.url, candidateId)
+                  return next
+                })
+              }}
+              options={set.candidates.map((candidate) => ({
+                value: candidate.id,
+                label: (
+                  <>
+                    Keep {candidate.title}
+                    {candidate.pinned ? ' (pinned)' : ''}
+                  </>
+                ),
+              }))}
+            />
+          </div>
         ))}
 
         <DialogFooter>

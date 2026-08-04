@@ -103,4 +103,9 @@ automated `npm run verify:release` gate.
 
 ## License
 
-No open-source license has been selected yet.
+GPL-3.0-or-later — see [`LICENSE`](LICENSE). Copyright © 2026 Jacob Robinson.
+
+Tab Toolkit is copyleft: you're free to use, study, modify, and redistribute
+it (including forks), but any distributed modified version must remain
+licensed under the GPL and ship its source. This keeps the project and its
+derivatives open — a closed-source or paid fork isn't permitted.

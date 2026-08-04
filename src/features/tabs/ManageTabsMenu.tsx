@@ -35,8 +35,8 @@ import { summarizeBulk } from './bulk-result'
 import { createChromeCloseRepository } from './close-repository'
 import type { CloseRepository } from './close-repository'
 import { showBulkResultToast } from './lifecycle-toast'
+import { useBulkAction } from './use-bulk-action'
 import { useCloseTabs } from './use-close-tabs'
-import { useTabs } from './use-tabs'
 
 interface ManageTabsMenuProps {
   tabs: readonly TabRecord[]
@@ -53,35 +53,23 @@ export function ManageTabsMenu({
   repository = createChromeCloseRepository(),
 }: ManageTabsMenuProps) {
   const gateway = useBrowserGateway()
-  const { refresh } = useTabs()
   const closeSelected = useCloseTabs(repository)
-  const [pending, setPending] = useState(false)
+  const { pending, setPending, run } = useBulkAction()
   const [addToGroupOpen, setAddToGroupOpen] = useState(false)
   const [duplicatesOpen, setDuplicatesOpen] = useState(false)
 
   const ids = tabs.map((tab) => tab.id)
   const hasDuplicates = findDuplicateSets(tabs).length > 0
 
-  const runAction = async (
+  const runAction = (
     verb: string,
     actionLabel: string,
     operation: (ids: number[]) => Promise<BulkResult>,
-  ) => {
-    setPending(true)
-
-    try {
-      const result = await operation(ids)
-      showBulkResultToast(result, verb)
-    } catch {
-      toast.error(`Could not ${actionLabel} the tabs. Try again.`)
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
+  ) =>
+    run(() => operation(ids), {
+      onSuccess: (result) => showBulkResultToast(result, verb),
+      errorMessage: `Could not ${actionLabel} the tabs. Try again.`,
+    })
 
   const handlePin = () => runAction('Pinned', 'pin', (tabIds) => gateway.setPinned(tabIds, true))
   const handleUnpin = () =>
@@ -91,7 +79,7 @@ export function ManageTabsMenu({
     runAction('Unmuted', 'unmute', (tabIds) => gateway.setMuted(tabIds, false))
   const handleReload = () => runAction('Reloaded', 'reload', (tabIds) => gateway.reloadTabs(tabIds))
 
-  const handleDiscard = async () => {
+  const handleDiscard = () => {
     const eligible = tabs.filter((tab) => !tab.active && !tab.discarded)
     const skippedCount = tabs.length - eligible.length
 
@@ -100,86 +88,45 @@ export function ManageTabsMenu({
       return
     }
 
-    setPending(true)
+    return run(() => gateway.discardTabs(eligible.map((tab) => tab.id)), {
+      onSuccess: (result) => {
+        if (result.succeeded.length === 0 && result.failed.length === 0) {
+          return
+        }
 
-    try {
-      const result = await gateway.discardTabs(eligible.map((tab) => tab.id))
-      const skippedSuffix =
-        skippedCount > 0
-          ? ` (${skippedCount} ${skippedCount === 1 ? 'tab was' : 'tabs were'} skipped: active or already discarded.)`
-          : ''
+        const skippedSuffix =
+          skippedCount > 0
+            ? ` (${skippedCount} ${skippedCount === 1 ? 'tab was' : 'tabs were'} skipped: active or already discarded.)`
+            : ''
 
-      if (result.succeeded.length === 0 && result.failed.length === 0) {
-        return
-      }
-
-      toast[result.failed.length === 0 ? 'success' : 'error'](
-        `${summarizeBulk(result, 'Discarded')}${skippedSuffix}`,
-      )
-    } catch {
-      toast.error('Could not discard the tabs. Try again.')
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
+        toast[result.failed.length === 0 ? 'success' : 'error'](
+          `${summarizeBulk(result, 'Discarded')}${skippedSuffix}`,
+        )
+      },
+      errorMessage: 'Could not discard the tabs. Try again.',
+    })
   }
 
-  const handleMoveToNewWindow = async () => {
-    setPending(true)
+  const handleMoveToNewWindow = () =>
+    run(() => moveSelectionToNewWindow(tabs, gateway), {
+      onSuccess: (result) => showBulkResultToast(result, 'Moved'),
+      errorMessage: 'Could not move the tabs. Try again.',
+    })
 
-    try {
-      const result = await moveSelectionToNewWindow(tabs, gateway)
-      showBulkResultToast(result, 'Moved')
-    } catch {
-      toast.error('Could not move the tabs. Try again.')
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
-
-  const handleArrange = async (sort: ArrangeSort) => {
-    setPending(true)
-
-    try {
-      const result = await arrangeSelection(tabs, sort, gateway)
-      showBulkResultToast(result, 'Arranged')
-    } catch {
-      toast.error('Could not arrange the tabs. Try again.')
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
+  const handleArrange = (sort: ArrangeSort) =>
+    run(() => arrangeSelection(tabs, sort, gateway), {
+      onSuccess: (result) => showBulkResultToast(result, 'Arranged'),
+      errorMessage: 'Could not arrange the tabs. Try again.',
+    })
 
   const handleSortByTitle = () => handleArrange('title')
   const handleSortByDomain = () => handleArrange('domain')
 
-  const handleGroupByDomain = async () => {
-    setPending(true)
-
-    try {
-      const result = await groupByDomain(tabs, gateway)
-      showBulkResultToast(result, 'Grouped')
-    } catch {
-      toast.error('Could not group the tabs. Try again.')
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
+  const handleGroupByDomain = () =>
+    run(() => groupByDomain(tabs, gateway), {
+      onSuccess: (result) => showBulkResultToast(result, 'Grouped'),
+      errorMessage: 'Could not group the tabs. Try again.',
+    })
 
   const handleClose = async () => {
     setPending(true)

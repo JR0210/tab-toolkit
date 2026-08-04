@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "A local-first Chrome tab management toolkit.",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JR0210/tab-toolkit.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vp dev",
