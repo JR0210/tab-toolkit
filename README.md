@@ -27,8 +27,8 @@ tabs. No accounts, no backend, no analytics.
 
 Tab Toolkit isn't on the Chrome Web Store yet. For now, build it yourself
 and load it as an unpacked extension — this needs [Node.js](https://nodejs.org)
-24 (or newer; see [`CONTRIBUTING.md`](CONTRIBUTING.md#prerequisites) for the
-exact version policy):
+24 (see [`CONTRIBUTING.md`](CONTRIBUTING.md#prerequisites) for the version
+policy):
 
 ```bash
 git clone https://github.com/JR0210/tab-toolkit.git

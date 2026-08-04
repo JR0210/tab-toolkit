@@ -18,9 +18,10 @@ extension popup.
 
 ## Prerequisites
 
-CI and `.node-version` both pin Node.js 24; `package.json`'s `engines`
-field states a floor of `>=22.12.0`. Only 24 is actually exercised in CI,
-so treat 24 as the version to develop against.
+CI and `.node-version` both specify Node.js 24 (as a bare major, so this
+floats to the latest 24.x rather than pinning an exact patch version);
+`package.json`'s `engines` field states a floor of `>=22.12.0`. Only 24 is
+actually exercised in CI, so treat 24 as the version to develop against.
 
 ## Development
 
