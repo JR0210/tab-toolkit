@@ -31,9 +31,9 @@ export function RadioGroup<Value>({
   onChange,
   layout = 'stack',
 }: RadioGroupProps<Value>) {
-  const items = options.map((option, index) => (
+  const items = options.map((option) => (
     <RadioOptionRow
-      key={index}
+      key={String(option.value)}
       name={name}
       option={option}
       checked={option.value === value}
