@@ -3,7 +3,7 @@ import { BookOpenIcon } from 'lucide-react'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import { COPY_FORMAT_LABELS, COPY_FORMATS } from '../export/copy-actions'
 import { defaultSettings } from '../../shared/settings/settings'
-import type { Scope, Theme } from '../../shared/settings/settings'
+import type { CopyFormat, Scope, Theme } from '../../shared/settings/settings'
 import { useSettings } from '../../shared/settings/use-settings'
 import { Button } from '../../shared/ui/button'
 import {
@@ -13,22 +13,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../shared/ui/dialog'
+import { RadioGroup } from '../../shared/ui/radio-group'
+import type { RadioOption } from '../../shared/ui/radio-group'
 import { Separator } from '../../shared/ui/separator'
 import { useInvokeAction } from '../shortcuts/use-shortcut-actions'
 import { ShortcutsDialog } from './ShortcutsDialog'
 
 const TAB_TOOLKIT_REPOSITORY_URL = 'https://github.com/JR0210/tab-toolkit'
 
-const THEME_LABELS: Record<Theme, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  system: 'System',
-}
+const THEME_OPTIONS: readonly RadioOption<Theme>[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+]
 
-const SCOPE_LABELS: Record<Scope, string> = {
-  current: 'Current window',
-  all: 'All windows',
-}
+const SCOPE_OPTIONS: readonly RadioOption<Scope>[] = [
+  { value: 'current', label: 'Current window' },
+  { value: 'all', label: 'All windows' },
+]
+
+const COPY_FORMAT_OPTIONS: readonly RadioOption<CopyFormat>[] = COPY_FORMATS.map((format) => ({
+  value: format,
+  label: COPY_FORMAT_LABELS[format],
+}))
 
 interface SettingsDialogProps {
   open: boolean
@@ -62,7 +69,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <RadioGroup
             legend="Theme"
             name="settings-theme"
-            options={THEME_LABELS}
+            layout="wrap"
+            options={THEME_OPTIONS}
             value={settings.theme}
             onChange={(theme) => void updateSettings({ theme }).catch(() => undefined)}
           />
@@ -72,7 +80,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <RadioGroup
             legend="Default scope"
             name="settings-scope"
-            options={SCOPE_LABELS}
+            layout="wrap"
+            options={SCOPE_OPTIONS}
             value={settings.scope}
             onChange={(scope) => void updateSettings({ scope }).catch(() => undefined)}
           />
@@ -82,8 +91,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <RadioGroup
             legend="Default copy format"
             name="settings-copy-format"
-            options={COPY_FORMAT_LABELS}
-            optionOrder={COPY_FORMATS}
+            layout="wrap"
+            options={COPY_FORMAT_OPTIONS}
             value={settings.copyFormat}
             onChange={(copyFormat) => void updateSettings({ copyFormat }).catch(() => undefined)}
           />
@@ -118,45 +127,5 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </>
-  )
-}
-
-function RadioGroup<Value extends string>({
-  legend,
-  name,
-  options,
-  optionOrder,
-  value,
-  onChange,
-}: {
-  legend: string
-  name: string
-  options: Record<Value, string>
-  optionOrder?: readonly Value[]
-  value: Value
-  onChange: (value: Value) => void
-}) {
-  const values = optionOrder ?? (Object.keys(options) as Value[])
-
-  return (
-    <fieldset className="flex flex-col gap-1.5">
-      <legend className="mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        {legend}
-      </legend>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        {values.map((optionValue) => (
-          <label key={optionValue} className="flex cursor-pointer items-center gap-2 text-[13px]">
-            <input
-              type="radio"
-              name={name}
-              checked={value === optionValue}
-              onChange={() => onChange(optionValue)}
-              className="size-4 shrink-0 cursor-pointer accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-            {options[optionValue]}
-          </label>
-        ))}
-      </div>
-    </fieldset>
   )
 }

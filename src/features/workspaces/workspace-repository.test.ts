@@ -193,6 +193,35 @@ describe('createWorkspaceRepository', () => {
     expect(result.skippedCount).toBe(1)
   })
 
+  it('serializes concurrent put() calls so neither read-modify-write clobbers the other', async () => {
+    const storage = createStorage({})
+    const repository = createWorkspaceRepository(storage)
+    const first = createWorkspace({ id: 'a' })
+    const second = createWorkspace({ id: 'b' })
+
+    // Fired without awaiting between them, so a naive read-modify-write
+    // (readAll() then writeAll()) would have both calls read the same
+    // pre-write state and the later writeAll() would drop the other's
+    // entry. Serialized, the second call's readAll() must observe the
+    // first call's writeAll() before it runs its own.
+    await Promise.all([repository.put(first), repository.put(second)])
+
+    const { workspaces } = await repository.list()
+    expect(workspaces.map((workspace) => workspace.id).sort()).toEqual(['a', 'b'])
+  })
+
+  it('serializes a concurrent put() and delete() targeting different workspaces', async () => {
+    const storage = createStorage({})
+    const repository = createWorkspaceRepository(storage)
+    await repository.put(createWorkspace({ id: 'existing' }))
+
+    const incoming = createWorkspace({ id: 'new' })
+    await Promise.all([repository.put(incoming), repository.delete('existing')])
+
+    const { workspaces } = await repository.list()
+    expect(workspaces.map((workspace) => workspace.id).sort()).toEqual(['new'])
+  })
+
   it('always performs an immutable read-modify-write of the full array, never a partial update', async () => {
     const persisted: Record<string, unknown> = {}
     const setCalls: Array<Record<string, unknown>> = []

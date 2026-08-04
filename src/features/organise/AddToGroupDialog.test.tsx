@@ -53,6 +53,59 @@ describe('AddToGroupDialog', () => {
     expect(groupTabs).toHaveBeenCalledExactlyOnceWith([10, 11], 1, 1)
   })
 
+  it('re-derives the default group choice on reopen when the eligible groups changed while closed', async () => {
+    const tabs = [tab({ id: 10, windowId: 1 })]
+    const gateway = createStubBrowserGateway()
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const noGroups: TabSnapshot = { tabs, groups: [], currentWindowId: 1, capturedAt: 1 }
+
+    const { rerender } = render(
+      <BrowserProvider gateway={gateway}>
+        <TabsContext value={createTabsContext(noGroups, refresh)}>
+          <SettingsContext value={createSettingsContext()}>
+            <AddToGroupDialog open onOpenChange={vi.fn()} tabs={tabs} />
+            <Toaster />
+          </SettingsContext>
+        </TabsContext>
+      </BrowserProvider>,
+    )
+
+    // No eligible groups yet, so it defaults to "Create a new group".
+    expect(await screen.findByRole('radio', { name: /create a new group/i })).toBeChecked()
+
+    // Closed, then a group becomes available elsewhere (e.g. created from a
+    // different menu) before the dialog is reopened.
+    const withGroup: TabSnapshot = {
+      tabs,
+      groups: [{ id: 1, windowId: 1, title: 'Research', color: 'blue' }],
+      currentWindowId: 1,
+      capturedAt: 2,
+    }
+
+    rerender(
+      <BrowserProvider gateway={gateway}>
+        <TabsContext value={createTabsContext(withGroup, refresh)}>
+          <SettingsContext value={createSettingsContext()}>
+            <AddToGroupDialog open={false} onOpenChange={vi.fn()} tabs={tabs} />
+            <Toaster />
+          </SettingsContext>
+        </TabsContext>
+      </BrowserProvider>,
+    )
+    rerender(
+      <BrowserProvider gateway={gateway}>
+        <TabsContext value={createTabsContext(withGroup, refresh)}>
+          <SettingsContext value={createSettingsContext()}>
+            <AddToGroupDialog open onOpenChange={vi.fn()} tabs={tabs} />
+            <Toaster />
+          </SettingsContext>
+        </TabsContext>
+      </BrowserProvider>,
+    )
+
+    expect(await screen.findByRole('radio', { name: 'Research' })).toBeChecked()
+  })
+
   it('creates a new group per window when the user chooses to create a new group', async () => {
     const user = userEvent.setup()
     let nextId = 90

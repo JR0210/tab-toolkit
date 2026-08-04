@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   ArchiveIcon,
   EllipsisVerticalIcon,
@@ -9,7 +8,6 @@ import {
   VolumeXIcon,
   XIcon,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { useBrowserGateway } from '../../chrome/use-browser-gateway'
 import type { BulkResult, TabRecord } from '../../domain/browser'
 import { Button } from '../../shared/ui/button'
@@ -23,6 +21,7 @@ import { createChromeCloseRepository } from './close-repository'
 import type { CloseRepository } from './close-repository'
 import { showBulkResultToast, showCloseToast } from './lifecycle-toast'
 import { closeTabs } from './tab-lifecycle-service'
+import { useBulkAction } from './use-bulk-action'
 import { useTabInteractions } from './use-tab-interactions'
 import { useTabs } from './use-tabs'
 
@@ -42,30 +41,15 @@ export function TabActionsMenu({
   const gateway = useBrowserGateway()
   const { snapshot, refresh } = useTabs()
   const { setManySelected } = useTabInteractions()
-  const [pending, setPending] = useState(false)
+  const { pending, run } = useBulkAction()
 
   const canDiscard = !tab.active && !tab.discarded
 
-  const runAction = async (
-    verb: string,
-    actionLabel: string,
-    operation: () => Promise<BulkResult>,
-  ) => {
-    setPending(true)
-
-    try {
-      const result = await operation()
-      showBulkResultToast(result, verb)
-    } catch {
-      toast.error(`Could not ${actionLabel} the tab. Try again.`)
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
+  const runAction = (verb: string, actionLabel: string, operation: () => Promise<BulkResult>) =>
+    run(operation, {
+      onSuccess: (result) => showBulkResultToast(result, verb),
+      errorMessage: `Could not ${actionLabel} the tab. Try again.`,
+    })
 
   const handlePinToggle = () =>
     runAction(tab.pinned ? 'Unpinned' : 'Pinned', tab.pinned ? 'unpin' : 'pin', () =>
@@ -78,25 +62,20 @@ export function TabActionsMenu({
   const handleReload = () => runAction('Reloaded', 'reload', () => gateway.reloadTabs([tab.id]))
   const handleDiscard = () => runAction('Discarded', 'discard', () => gateway.discardTabs([tab.id]))
 
-  const handleClose = async () => {
-    setPending(true)
-
-    try {
-      const groupsById = new Map((snapshot?.groups ?? []).map((group) => [group.id, group]))
-      const result = await closeTabs([tab], groupsById, gateway, repository)
-
-      setManySelected(result.succeeded, false)
-      showCloseToast(result, gateway, repository, refresh)
-    } catch {
-      toast.error('Could not close the tab. Try again.')
-    } finally {
-      try {
-        await refresh()
-      } finally {
-        setPending(false)
-      }
-    }
-  }
+  const handleClose = () =>
+    run(
+      async () => {
+        const groupsById = new Map((snapshot?.groups ?? []).map((group) => [group.id, group]))
+        return closeTabs([tab], groupsById, gateway, repository)
+      },
+      {
+        onSuccess: (result) => {
+          setManySelected(result.succeeded, false)
+          showCloseToast(result, gateway, repository, refresh)
+        },
+        errorMessage: 'Could not close the tab. Try again.',
+      },
+    )
 
   return (
     <DropdownMenu>

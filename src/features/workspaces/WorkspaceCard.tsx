@@ -46,7 +46,23 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
     setRenameOpen(true)
   }
 
-  const submitRename = async () => {
+  // Shared shape for rename/delete: the provider (onRename/onDelete) already
+  // surfaces its own toast on failure, so a thrown error here is swallowed
+  // rather than shown again -- just leaves the dialog open (whichever
+  // `setXOpen(false)` call `action` would have made is simply never reached)
+  // so the user can retry.
+  const runPending = async (action: () => Promise<void>): Promise<void> => {
+    setPending(true)
+    try {
+      await action()
+    } catch {
+      // Intentionally swallowed -- see comment above.
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const submitRename = () => {
     if (pending) {
       return
     }
@@ -57,30 +73,17 @@ export function WorkspaceCard({ workspace, onRename, onDelete, now }: WorkspaceC
       return
     }
 
-    setPending(true)
-    try {
+    return runPending(async () => {
       await onRename(workspace.id, trimmed)
       setRenameOpen(false)
-    } catch {
-      // The provider already surfaced a toast describing what went wrong;
-      // keep the dialog open (skipped above) so the user can retry.
-    } finally {
-      setPending(false)
-    }
+    })
   }
 
-  const confirmDelete = async () => {
-    setPending(true)
-    try {
+  const confirmDelete = () =>
+    runPending(async () => {
       await onDelete(workspace.id)
       setDeleteOpen(false)
-    } catch {
-      // The provider already surfaced a toast describing what went wrong;
-      // keep the dialog open (skipped above) so the user can retry.
-    } finally {
-      setPending(false)
-    }
-  }
+    })
 
   const handleOpen = async () => {
     // Guards against a second click firing a second restore while the first
