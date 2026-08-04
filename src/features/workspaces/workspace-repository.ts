@@ -61,27 +61,46 @@ export function createWorkspaceRepository(storage: WorkspaceStorageArea): Worksp
     await storage.set({ [storageKey]: sorted })
   }
 
+  // put/delete/replaceAll are each a read-modify-write of the full array, so
+  // two concurrent calls (e.g. renaming one workspace while deleting another
+  // -- each WorkspaceCard tracks its own pending state, so both can be
+  // in flight at once) would otherwise both read the same base state and the
+  // later write would silently clobber the earlier one. Chaining every
+  // mutation onto this promise serializes them, mirroring SettingsProvider's
+  // saveChain.
+  let chain: Promise<unknown> = Promise.resolve()
+
+  function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = chain.then(operation)
+    chain = result.catch(() => undefined)
+    return result
+  }
+
   return {
     list: readAll,
-    async put(workspace) {
-      const { workspaces } = await readAll()
-      const index = workspaces.findIndex((existing) => existing.id === workspace.id)
+    put(workspace) {
+      return enqueue(async () => {
+        const { workspaces } = await readAll()
+        const index = workspaces.findIndex((existing) => existing.id === workspace.id)
 
-      if (index === -1) {
-        workspaces.push(workspace)
-      } else {
-        workspaces[index] = workspace
-      }
+        if (index === -1) {
+          workspaces.push(workspace)
+        } else {
+          workspaces[index] = workspace
+        }
 
-      await writeAll(workspaces)
+        await writeAll(workspaces)
+      })
     },
-    async delete(id) {
-      const { workspaces } = await readAll()
+    delete(id) {
+      return enqueue(async () => {
+        const { workspaces } = await readAll()
 
-      await writeAll(workspaces.filter((workspace) => workspace.id !== id))
+        await writeAll(workspaces.filter((workspace) => workspace.id !== id))
+      })
     },
-    async replaceAll(workspaces) {
-      await writeAll(workspaces)
+    replaceAll(workspaces) {
+      return enqueue(() => writeAll(workspaces))
     },
   }
 }
